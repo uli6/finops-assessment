@@ -80,7 +80,6 @@ def init_db():
             role TEXT NOT NULL,
             confirmation_token TEXT,
             is_confirmed BOOLEAN DEFAULT 0,
-            is_admin BOOLEAN DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
@@ -94,7 +93,6 @@ def init_db():
     required_columns = {
         'confirmation_token': 'TEXT',
         'is_confirmed': 'BOOLEAN DEFAULT 0',
-        'is_admin': 'BOOLEAN DEFAULT 0',
         'created_at': 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
         'is_synthetic': 'BOOLEAN DEFAULT 0'
     }
@@ -111,13 +109,6 @@ def init_db():
     try:
         # Set is_confirmed = 1 for existing users (assume they were confirmed)
         cursor.execute('UPDATE users SET is_confirmed = 1 WHERE is_confirmed IS NULL OR is_confirmed = 0')
-        
-        # Set admin status based on email domain
-        cursor.execute('''
-            UPDATE users 
-            SET is_admin = 1 
-            WHERE email LIKE '%@ulisses.xyz' AND (is_admin IS NULL OR is_admin = 0)
-        ''')
         
         print("Updated existing users with default values")
     except sqlite3.Error as e:
@@ -298,7 +289,7 @@ def send_email(to_email, subject, body):
         
         if not email_user or not email_pass:
             print("Email configuration not found. Skipping email send.")
-            return True
+            return False
         
         msg = MIMEText(body, 'html')
         msg['Subject'] = subject
@@ -767,8 +758,17 @@ def register():
         if not all([name, email, role]):
             return jsonify({"status": "error", "message": "All fields are required"})
         
+        # Block public email domains before any DB operation
+        public_domains = [
+            'gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'aol.com', 'icloud.com', 'protonmail.com',
+            'mail.com', 'zoho.com', 'gmx.com', 'yandex.com', 'live.com', 'msn.com', 'me.com', 'pm.me', 'fastmail.com'
+        ]
+        domain = email.split('@')[1] if '@' in email else ''
+        if domain in public_domains:
+            return jsonify({"status": "error", "message": "Please use your corporate email address to register."})
+        
         # Extract organization from email domain
-        organization = email.split('@')[1] if '@' in email else 'Unknown'
+        organization = domain if domain else 'Unknown'
         
         # Generate confirmation token
         confirmation_token = secrets.token_urlsafe(32)
@@ -781,9 +781,9 @@ def register():
         
         try:
             cursor.execute('''
-                INSERT INTO users (name, email, organization, role, confirmation_token, is_confirmed, is_admin)
-                VALUES (?, ?, ?, ?, ?, 0, ?)
-            ''', (encrypt_data(name), encrypt_data(email), encrypt_data(organization), encrypt_data(role), confirmation_token, is_admin_user))
+                INSERT INTO users (name, email, organization, role, confirmation_token, is_confirmed)
+                VALUES (?, ?, ?, ?, ?, 0)
+            ''', (encrypt_data(name), encrypt_data(email), encrypt_data(organization), encrypt_data(role), confirmation_token))
             
             conn.commit()
             
@@ -944,8 +944,7 @@ def dashboard():
                          user_name=session['user_name'],
                          assessments=assessments,
                          scopes=SCOPES,
-                         domains=DOMAINS,
-                         is_admin=is_admin())
+                         domains=DOMAINS)
 
 @app.route('/start_assessment', methods=['POST'])
 def start_assessment():
@@ -1671,105 +1670,6 @@ def get_company_mapping(users):
         domain_to_company[domain] = f"Company {chr(65 + (idx % 26))}"
     return domain_to_company
 
-@app.route('/debug/benchmarks/api')
-def debug_benchmarks_api():
-    if not is_admin():
-        return jsonify({"error": "Access denied. Admin privileges required."}), 403
-    try:
-        conn = sqlite3.connect(DATABASE)
-        cursor = conn.cursor()
-        # Get all completed assessments with user email
-        cursor.execute('''
-            SELECT 
-                a.id,
-                a.scope_id,
-                a.domain,
-                a.overall_percentage,
-                a.created_at,
-                u.email
-            FROM assessments a
-            JOIN users u ON a.user_id = u.id
-            WHERE a.status = 'completed'
-            ORDER BY a.created_at DESC
-        ''')
-        assessments = cursor.fetchall()
-        # Restore scope/domain stats queries
-        cursor.execute('''
-            SELECT 
-                scope_id,
-                COUNT(*) as count,
-                AVG(overall_percentage) as avg_percentage,
-                MIN(overall_percentage) as min_percentage,
-                MAX(overall_percentage) as max_percentage
-            FROM assessments 
-            WHERE status = 'completed'
-            GROUP BY scope_id
-        ''')
-        scope_stats = cursor.fetchall()
-        cursor.execute('''
-            SELECT 
-                domain,
-                COUNT(*) as count,
-                AVG(overall_percentage) as avg_percentage,
-                MIN(overall_percentage) as min_percentage,
-                MAX(overall_percentage) as max_percentage
-            FROM assessments 
-            WHERE status = 'completed' AND domain IS NOT NULL
-            GROUP BY domain
-        ''')
-        domain_stats = cursor.fetchall()
-        conn.close()
-        # Build domain to company mapping
-        emails = [decrypt_data(a[5]) for a in assessments]
-        domain_to_company = get_company_mapping([(None, None, e) for e in emails])
-        # Process assessment data with anonymized company
-        assessments_data = []
-        for idx, assessment in enumerate(assessments):
-            email = decrypt_data(assessment[5])
-            domain = email.split('@')[1].lower() if '@' in email else 'unknown'
-            company = domain_to_company[domain]
-            assessments_data.append({
-                'id': assessment[0],
-                'scope_id': assessment[1],
-                'domain': assessment[2],
-                'overall_percentage': assessment[3],
-                'created_at': assessment[4],
-                'company': company
-            })
-        # Process scope statistics
-        scope_benchmarks = {}
-        for scope_stat in scope_stats:
-            scope_id = scope_stat[0]
-            scope_name = next((s['name'] for s in SCOPES if s['id'] == scope_id), scope_id)
-            scope_benchmarks[scope_id] = {
-                'name': scope_name,
-                'count': scope_stat[1],
-                'avg_percentage': round(scope_stat[2], 1) if scope_stat[2] else 0,
-                'min_percentage': scope_stat[3] if scope_stat[3] else 0,
-                'max_percentage': scope_stat[4] if scope_stat[4] else 0
-            }
-        # Process domain statistics
-        domain_benchmarks = {}
-        for domain_stat in domain_stats:
-            domain_name = domain_stat[0]
-            domain_benchmarks[domain_name] = {
-                'count': domain_stat[1],
-                'avg_percentage': round(domain_stat[2], 1) if domain_stat[2] else 0,
-                'min_percentage': domain_stat[3] if domain_stat[3] else 0,
-                'max_percentage': domain_stat[4] if domain_stat[4] else 0
-            }
-        return jsonify({
-            'assessments': assessments_data,
-            'scope_benchmarks': scope_benchmarks,
-            'domain_benchmarks': domain_benchmarks,
-            'total_completed': len(assessments_data),
-            'scopes': SCOPES,
-            'domains': DOMAINS
-        })
-    except Exception as e:
-        print(f"Debug benchmarks error: {e}")
-        return jsonify({"error": "Failed to fetch benchmark data"}), 500
-
 @app.route('/settings')
 def settings():
     if 'user_id' not in session:
@@ -1864,6 +1764,53 @@ def fix_real_example_links(html_text):
     return re.sub(r'(Real Example:.*?)(<a [^>]*href=["\\\']https?://(?:www\.)?finops\.org[^>]+>.*?</a>)',
                   r'\1 <span style="color:#e53e3e;font-weight:bold">[Exemplo real não encontrado, consulte <a href=\"https://news.google.com/search?q=finops\" target=\"_blank\">Google News</a>]</span>',
                   html_text, flags=re.IGNORECASE)
+
+@app.route('/dashboard/stats')
+def dashboard_stats():
+    if not is_admin():
+        return jsonify({"error": "Access denied. Admin privileges required."}), 403
+    try:
+        conn = sqlite3.connect(DATABASE)
+        cursor = conn.cursor()
+        cursor.execute('SELECT id, name, email, organization, role, is_confirmed, created_at, confirmation_token FROM users ORDER BY created_at DESC')
+        users = cursor.fetchall()
+        cursor.execute('SELECT COUNT(*) FROM assessments')
+        total_assessments = cursor.fetchone()[0]
+        cursor.execute('SELECT COUNT(*) FROM assessments WHERE status = "completed"')
+        completed_assessments = cursor.fetchone()[0]
+        cursor.execute('SELECT COUNT(*) FROM assessments WHERE status = "in_progress"')
+        in_progress_assessments = cursor.fetchone()[0]
+        conn.close()
+        users_data = []
+        emails = []
+        for user in users:
+            decrypted_email = decrypt_data(user[2])
+            emails.append(decrypted_email)
+            users_data.append({
+                'id': user[0],
+                'name': decrypt_data(user[1]),
+                'email': decrypted_email,
+                'organization': decrypt_data(user[3]),
+                'role': decrypt_data(user[4]),
+                'is_confirmed': bool(user[5]),
+                'created_at': user[6],
+                'has_token': bool(user[7])
+            })
+        domain_to_company = get_company_mapping([(u['id'], u['name'], u['email']) for u in users_data])
+        unique_domains = set(domain_to_company.keys())
+        return jsonify({
+            'stats': {
+                'total_users': len(users),
+                'confirmed_users': len([u for u in users_data if u['is_confirmed']]),
+                'total_companies': len(unique_domains),
+                'total_assessments': total_assessments,
+                'completed_assessments': completed_assessments,
+                'in_progress_assessments': in_progress_assessments
+            }
+        })
+    except Exception as e:
+        print(f"Dashboard stats error: {e}")
+        return jsonify({"error": "Failed to fetch stats"}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5002)

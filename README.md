@@ -569,3 +569,68 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 [![Flask](https://img.shields.io/badge/Flask-2.0+-lightgrey)](https://flask.palletsprojects.com/)
 
 </div> 
+
+## 🛡️ Security Hardening (2025 Update)
+
+### Security Features
+- **HTTP Security Headers**: Strict-Transport-Security, X-Frame-Options, X-Content-Type-Options, Content-Security-Policy, and more are set by default.
+- **CSRF Protection**: All forms are protected using Flask-WTF's CSRF tokens.
+- **Session & Cookie Security**: Secure, HttpOnly, and SameSite cookie flags are enforced.
+- **File Upload Hardening**: Only PDF, PNG, JPG, JPEG files up to 5MB are accepted. Files are renamed with UUIDs and validated server-side.
+- **Markdown/XSS Protection**: All markdown rendered content is sanitized using bleach to prevent XSS.
+- **Dependency Auditing**: Use `pip-audit` to check for vulnerabilities before deployment.
+
+### New Dependencies
+- `Flask-WTF` (CSRF protection)
+- `bleach` (HTML sanitization)
+- `wtforms` (form validation)
+
+Add these to your requirements.txt (already included in the latest version):
+```
+Flask-WTF==1.2.2
+bleach==6.2.0
+wtforms==3.2.1
+```
+
+### Installation & Quick Start (Updated)
+
+1. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   pip install pip-audit  # For security auditing
+   pip-audit
+   ```
+
+2. **Run the app**
+   ```bash
+   python app.py
+   ```
+
+---
+
+## 🚀 Production Deployment & AWS Best Practices
+
+- **Use a production WSGI server** (e.g., gunicorn or uWSGI) behind an Nginx or AWS ALB.
+- **Set `DEBUG = False`** in production.
+- **Store all secrets** (Flask secret, DB credentials, API keys) in AWS Secrets Manager or environment variables.
+- **Use HTTPS** (AWS ACM for SSL certs, ALB termination).
+- **Restrict Security Groups** to only necessary ports (80/443 for ALB, SSH only to trusted IPs).
+- **Enable AWS WAF** for web firewalling.
+- **Use S3 for uploads** (private bucket, signed URLs for download).
+- **Use RDS (Postgres/MySQL)** for production DB (not SQLite).
+- **Enable CloudWatch logging** for app and access logs.
+- **Run `pip-audit`** before every deployment.
+- **Regularly update dependencies** and monitor for vulnerabilities.
+
+---
+
+## 🔐 Security Checklist (for Go-Live)
+- [x] All secrets managed via environment or AWS Secrets Manager
+- [x] Security headers set for all responses
+- [x] CSRF protection enabled
+- [x] File uploads validated and sanitized
+- [x] Markdown rendering sanitized
+- [x] All dependencies up to date and audited
+- [x] Admin endpoints protected
+- [x] HTTPS enforced
+- [x] Error messages generic in production 

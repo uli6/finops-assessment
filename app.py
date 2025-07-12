@@ -23,6 +23,8 @@ import uuid
 import bleach
 from weasyprint import HTML, CSS
 from io import BytesIO
+import hashlib
+from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(32)
@@ -64,6 +66,9 @@ def decrypt_data(encrypted_data):
     except:
         return encrypted_data  # Return as-is if decryption fails (for legacy data)
 
+def hash_company(domain):
+    return hashlib.sha256(domain.strip().lower().encode()).hexdigest()
+
 # Initialize database with complete migration support
 def init_db():
     """Initialize database with proper schema and handle migrations"""
@@ -74,10 +79,8 @@ def init_db():
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            email TEXT UNIQUE NOT NULL,
-            organization TEXT NOT NULL,
-            role TEXT NOT NULL,
+            email_hash TEXT UNIQUE NOT NULL,
+            company_hash TEXT,
             confirmation_token TEXT,
             is_confirmed BOOLEAN DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -91,6 +94,7 @@ def init_db():
     
     # Add missing columns one by one
     required_columns = {
+        'company_hash': 'TEXT',
         'confirmation_token': 'TEXT',
         'is_confirmed': 'BOOLEAN DEFAULT 0',
         'created_at': 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
@@ -264,21 +268,6 @@ CAPABILITIES = [
 DOMAINS = ["Understanding Usage & Cost", "Quantify Business Value", "Optimize Usage & Cost", "Manage the FinOps Practice"]
 
 # Helper functions
-def is_admin():
-    """Check if current user is admin"""
-    if 'user_id' not in session:
-        return False
-    
-    conn = sqlite3.connect(DATABASE)
-    cursor = conn.cursor()
-    cursor.execute('SELECT email, is_admin FROM users WHERE id = ?', (session['user_id'],))
-    user = cursor.fetchone()
-    conn.close()
-    
-    if user and user[0].endswith('@ulisses.xyz'):
-        return True
-    return user and user[1] == 1
-
 def send_email(to_email, subject, body):
     """Send email using SMTP"""
     try:
@@ -748,17 +737,15 @@ def index():
         return redirect('/dashboard')
     return render_template('login.html')
 
+# Token serializer for email confirmation
+serializer = URLSafeTimedSerializer(app.secret_key or 'fallback-secret-key')
+
 @app.route('/register', methods=['POST'])
 def register():
     try:
-        name = request.form.get('name', '').strip()
         email = request.form.get('email', '').strip().lower()
-        role = request.form.get('role', '').strip()
-        
-        if not all([name, email, role]):
-            return jsonify({"status": "error", "message": "All fields are required"})
-        
-        # Block public email domains before any DB operation
+        if not email:
+            return jsonify({"status": "error", "message": "Email is required"})
         public_domains = [
             'gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'aol.com', 'icloud.com', 'protonmail.com',
             'mail.com', 'zoho.com', 'gmx.com', 'yandex.com', 'live.com', 'msn.com', 'me.com', 'pm.me', 'fastmail.com'
@@ -766,47 +753,27 @@ def register():
         domain = email.split('@')[1] if '@' in email else ''
         if domain in public_domains:
             return jsonify({"status": "error", "message": "Please use your corporate email address to register."})
-        
-        # Extract organization from email domain
-        organization = domain if domain else 'Unknown'
-        
-        # Generate confirmation token
-        confirmation_token = secrets.token_urlsafe(32)
-        
-        # Set admin status based on email domain
-        is_admin_user = 1 if email.endswith('@ulisses.xyz') else 0
-        
+        email_hash = hash_email(email)
         conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
-        
         try:
-            cursor.execute('''
-                INSERT INTO users (name, email, organization, role, confirmation_token, is_confirmed)
-                VALUES (?, ?, ?, ?, ?, 0)
-            ''', (encrypt_data(name), encrypt_data(email), encrypt_data(organization), encrypt_data(role), confirmation_token))
-            
-            conn.commit()
-            
-            # Send confirmation email
-            if send_confirmation_email(email, confirmation_token):
-                return jsonify({
-                    "status": "success", 
-                    "message": "Registration successful! Please check your email to confirm your account, then use the login tab to request a magic link."
-                })
-            else:
-                # If email fails, auto-confirm the user
-                cursor.execute('UPDATE users SET is_confirmed = 1 WHERE email = ?', (email,))
-                conn.commit()
-                return jsonify({
-                    "status": "success", 
-                    "message": "Registration successful! Email confirmation is disabled. You can now login using the login tab."
-                })
-                
-        except sqlite3.IntegrityError:
-            return jsonify({"status": "error", "message": "Email already registered"})
+            cursor.execute('SELECT id FROM users WHERE email_hash = ?', (email_hash,))
+            if cursor.fetchone():
+                return jsonify({"status": "error", "message": "Email already registered"})
         finally:
             conn.close()
-            
+        # Generate signed token with email and domain
+        token = serializer.dumps({'email': email, 'domain': domain})
+        if send_confirmation_email(email, token):
+            return jsonify({
+                "status": "success",
+                "message": "Registration successful! Please check your email to confirm your account, then use the login tab to request a magic link."
+            })
+        else:
+            return jsonify({
+                "status": "error",
+                "message": "Failed to send confirmation email. Please try again."
+            })
     except Exception as e:
         print(f"Registration error: {e}")
         return jsonify({"status": "error", "message": "Registration failed. Please try again."})
@@ -815,56 +782,29 @@ def register():
 def login():
     try:
         email = request.form.get('email', '').strip().lower()
-        
         if not email:
             return jsonify({"status": "error", "message": "Email is required"})
-        
+        email_hash = hash_email(email)
         conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
-        # For login, we need to check all users since emails are encrypted
-        cursor.execute('SELECT id, name, email, is_confirmed FROM users')
-        all_users = cursor.fetchall()
-        
-        user = None
-        for u in all_users:
-            if decrypt_data(u[2]) == email:  # Check decrypted email field
-                user = u
-                break
+        cursor.execute('SELECT id, is_confirmed FROM users WHERE email_hash = ?', (email_hash,))
+        user = cursor.fetchone()
         conn.close()
-        
         if not user:
             return jsonify({"status": "error", "message": "User not found. Please register first."})
-        
-        if not user[2]:  # is_confirmed
+        if not user[1]:
             return jsonify({"status": "error", "message": "Please confirm your email first before logging in."})
-        
         # Generate magic link token
         magic_token = secrets.token_urlsafe(32)
-        
-        # Store token with expiration (15 minutes)
         conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
-        # Update the user's confirmation token
-        cursor.execute('''
-            UPDATE users 
-            SET confirmation_token = ? 
-            WHERE id = ?
-        ''', (magic_token, user[0]))
+        cursor.execute('UPDATE users SET confirmation_token = ? WHERE id = ?', (magic_token, user[0]))
         conn.commit()
         conn.close()
-        
-        # Send magic link
         if send_magic_link(email, magic_token):
-            return jsonify({
-                "status": "success", 
-                "message": "Magic link sent! Check your email and click the link to login."
-            })
+            return jsonify({"status": "success", "message": "Magic link sent! Check your email and click the link to login."})
         else:
-            return jsonify({
-                "status": "error", 
-                "message": "Failed to send magic link. Please try again or contact support."
-            })
-            
+            return jsonify({"status": "error", "message": "Failed to send magic link. Please try again or contact support."})
     except Exception as e:
         print(f"Login error: {e}")
         return jsonify({"status": "error", "message": "Login failed. Please try again."})
@@ -874,28 +814,18 @@ def magic_login(token):
     try:
         conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
-        cursor.execute('''
-            SELECT id, name, email, is_confirmed 
-            FROM users 
-            WHERE confirmation_token = ?
-        ''', (token,))
+        cursor.execute('SELECT id, email_hash, is_confirmed FROM users WHERE confirmation_token = ?', (token,))
         user = cursor.fetchone()
-        
         if user:
-            # Clear the token and log in the user
             cursor.execute('UPDATE users SET confirmation_token = NULL WHERE id = ?', (user[0],))
             conn.commit()
-            
             session['user_id'] = user[0]
-            session['user_name'] = decrypt_data(user[1])
-            session['user_email'] = decrypt_data(user[2])
-            
+            session['user_hash'] = user[1]
             conn.close()
             return redirect('/dashboard')
         else:
             conn.close()
             return render_template('login_error.html')
-            
     except Exception as e:
         print(f"Magic login error: {e}")
         return render_template('login_error.html')
@@ -903,22 +833,38 @@ def magic_login(token):
 @app.route('/confirm_email/<token>')
 def confirm_email(token):
     try:
+        # Decode token and check expiry (24h)
+        try:
+            data = serializer.loads(token, max_age=86400)
+            email = data['email']
+            domain = data['domain']
+        except SignatureExpired:
+            return render_template('email_error.html', message="Confirmation link expired.")
+        except BadSignature:
+            return render_template('email_error.html', message="Invalid confirmation link.")
+        email_hash = hash_email(email)
+        company_hash = hash_company(domain) if domain else None
         conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
+        cursor.execute('SELECT id, is_confirmed FROM users WHERE email_hash = ?', (email_hash,))
+        user = cursor.fetchone()
+        if user:
+            if user[1]:
+                conn.close()
+                return render_template('email_confirmed.html')
+            else:
+                cursor.execute('UPDATE users SET is_confirmed = 1, confirmation_token = NULL WHERE id = ?', (user[0],))
+                conn.commit()
+                conn.close()
+                return render_template('email_confirmed.html')
+        # Insert new confirmed user
         cursor.execute('''
-            UPDATE users 
-            SET is_confirmed = 1, confirmation_token = NULL 
-            WHERE confirmation_token = ?
-        ''', (token,))
-        
-        if cursor.rowcount > 0:
-            conn.commit()
-            conn.close()
-            return render_template('email_confirmed.html')
-        else:
-            conn.close()
-            return render_template('email_error.html')
-            
+            INSERT INTO users (email_hash, company_hash, is_confirmed, confirmation_token)
+            VALUES (?, ?, 1, NULL)
+        ''', (email_hash, company_hash))
+        conn.commit()
+        conn.close()
+        return render_template('email_confirmed.html')
     except Exception as e:
         print(f"Email confirmation error: {e}")
         return render_template('email_error.html')
@@ -927,7 +873,6 @@ def confirm_email(token):
 def dashboard():
     if 'user_id' not in session:
         return redirect('/')
-    
     # Get user's assessments
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
@@ -939,9 +884,7 @@ def dashboard():
     ''', (session['user_id'],))
     assessments = cursor.fetchall()
     conn.close()
-    
     return render_template('dashboard.html', 
-                         user_name=session['user_name'],
                          assessments=assessments,
                          scopes=SCOPES,
                          domains=DOMAINS)
@@ -1070,15 +1013,18 @@ def submit_assessment():
             return jsonify({"status": "error", "message": "All fields are required"})
         
         # Handle file uploads
-        evidence_files = []
+        evidence_analysis = []
+        uploaded_files = []
+        
         if 'evidence' in request.files:
             files = request.files.getlist('evidence')
             for file in files:
                 if file and file.filename:
+                    # Create temporary file for processing
                     filename = secure_filename(file.filename)
                     filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
                     file.save(filepath)
-                    evidence_files.append(filename)
+                    uploaded_files.append(filepath)
         
         # Get AI analysis
         try:
@@ -1094,6 +1040,13 @@ def submit_assessment():
                 
                 openai.api_key = api_key
                 
+                # Include file analysis in the prompt if available
+                file_context = ""
+                if evidence_analysis:
+                    file_context = "\n\nEvidence Analysis:\n"
+                    for evidence in evidence_analysis:
+                        file_context += f"\nFile: {evidence['filename']}\n{evidence['analysis']}\n"
+                
                 prompt = f"""
                 Analyze this FinOps assessment response and provide a score from 0-4 and improvement suggestions.
                 
@@ -1101,7 +1054,7 @@ def submit_assessment():
                 Capability: {capability_name}
                 Lens: {lens_name}
                 
-                Response: {answer}
+                Response: {answer}{file_context}
                 
                 Scoring criteria:
                 0 = No capability or awareness
@@ -1150,6 +1103,71 @@ def submit_assessment():
             score = 2
             improvement = "Analysis temporarily unavailable. Your response has been saved."
         
+        # Process uploaded files with ChatGPT if available
+        if uploaded_files and (os.getenv('OPENAI_API_KEY') or os.getenv('XAI_API_KEY')):
+            scope_name = next((s['name'] for s in SCOPES if s['id'] == session['current_scope']), session['current_scope'])
+            capability_name = next((c['name'] for c in CAPABILITIES if c['id'] == capability_id), capability_id)
+            lens_name = next((l['name'] for l in LENSES if l['id'] == lens_id), lens_id)
+            
+            api_key = os.getenv('OPENAI_API_KEY') or os.getenv('XAI_API_KEY')
+            if os.getenv('XAI_API_KEY'):
+                openai.api_base = "https://api.x.ai/v1"
+            
+            openai.api_key = api_key
+            
+            for filepath in uploaded_files:
+                try:
+                    filename = os.path.basename(filepath)
+                    
+                    # Read file content
+                    with open(filepath, 'r', encoding='utf-8') as f:
+                        file_content = f.read()
+                    
+                    file_prompt = f"""
+                    Analyze this uploaded evidence file for FinOps assessment:
+                    
+                    File: {filename}
+                    Scope: {scope_name}
+                    Capability: {capability_name}
+                    Lens: {lens_name}
+                    
+                    File Content:
+                    {file_content[:2000]}  # Limit content for API
+                    
+                    Provide a brief analysis of this evidence in relation to the FinOps capability:
+                    - What does this evidence show about the organization's FinOps maturity?
+                    - What specific insights can be drawn from this evidence?
+                    - How does this evidence support or contradict the user's text response?
+                    
+                    Keep the analysis concise and focused on FinOps relevance.
+                    """
+                    
+                    file_response = openai.ChatCompletion.create(
+                        model="gpt-3.5-turbo",
+                        messages=[{"role": "user", "content": file_prompt}],
+                        max_tokens=300,
+                        temperature=0.3
+                    )
+                    
+                    file_analysis = file_response.choices[0].message.content
+                    evidence_analysis.append({
+                        'filename': filename,
+                        'analysis': file_analysis
+                    })
+                    
+                except Exception as e:
+                    print(f"File analysis error for {filepath}: {e}")
+                    evidence_analysis.append({
+                        'filename': os.path.basename(filepath),
+                        'analysis': 'File could not be analyzed due to processing error.'
+                    })
+                
+                # Delete the file immediately after processing
+                try:
+                    os.remove(filepath)
+                except Exception as e:
+                    print(f"Error deleting file {filepath}: {e}")
+        
         # Save response to database
         conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
@@ -1168,13 +1186,13 @@ def submit_assessment():
                 UPDATE responses 
                 SET answer = ?, score = ?, improvement_suggestions = ?, evidence_files = ?
                 WHERE id = ?
-            ''', (answer, score, improvement, json.dumps(evidence_files), existing[0]))
+            ''', (answer, score, improvement, json.dumps(evidence_analysis), existing[0]))
         else:
             # Insert new response
             cursor.execute('''
                 INSERT INTO responses (assessment_id, capability_id, lens_id, answer, score, improvement_suggestions, evidence_files)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', (assessment_id, capability_id, lens_id, answer, score, improvement, json.dumps(evidence_files)))
+            ''', (assessment_id, capability_id, lens_id, answer, score, improvement, json.dumps(evidence_analysis)))
         
         # Update assessment timestamp
         cursor.execute('''
@@ -1678,23 +1696,14 @@ def settings():
     try:
         conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
-        cursor.execute('''
-            SELECT name, email, organization, role, created_at
-            FROM users 
-            WHERE id = ?
-        ''', (session['user_id'],))
+        cursor.execute('SELECT created_at FROM users WHERE id = ?', (session['user_id'],))
         user = cursor.fetchone()
         conn.close()
         
         if not user:
             return redirect('/')
         
-        return render_template('settings.html',
-                             user_name=decrypt_data(user[0]),
-                             user_email=decrypt_data(user[1]),
-                             user_organization=decrypt_data(user[2]),
-                             user_role=decrypt_data(user[3]),
-                             user_created_at=user[4][:10] if user[4] and user[4] != 'None' else 'Unknown')
+        return render_template('settings.html', user_created_at=user[0][:10] if user[0] else 'Unknown')
         
     except Exception as e:
         print(f"Settings error: {e}")
@@ -1709,17 +1718,13 @@ def delete_account():
         conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
         
-        # Check if user exists and is not an admin
-        cursor.execute('SELECT is_admin FROM users WHERE id = ?', (session['user_id'],))
+        # Check if user exists
+        cursor.execute('SELECT id FROM users WHERE id = ?', (session['user_id'],))
         user = cursor.fetchone()
         
         if not user:
             conn.close()
             return jsonify({"status": "error", "message": "User not found"}), 404
-        
-        if user[0]:  # is_admin
-            conn.close()
-            return jsonify({"status": "error", "message": "Admin accounts cannot be deleted"}), 403
         
         # Delete user's assessments and responses
         cursor.execute('DELETE FROM responses WHERE assessment_id IN (SELECT id FROM assessments WHERE user_id = ?)', (session['user_id'],))
@@ -1767,13 +1772,13 @@ def fix_real_example_links(html_text):
 
 @app.route('/dashboard/stats')
 def dashboard_stats():
-    if not is_admin():
-        return jsonify({"error": "Access denied. Admin privileges required."}), 403
     try:
         conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
-        cursor.execute('SELECT id, name, email, organization, role, is_confirmed, created_at, confirmation_token FROM users ORDER BY created_at DESC')
+        cursor.execute('SELECT id FROM users ORDER BY created_at DESC')
         users = cursor.fetchall()
+        cursor.execute('SELECT COUNT(DISTINCT company_hash) FROM users WHERE company_hash IS NOT NULL')
+        total_companies = cursor.fetchone()[0]
         cursor.execute('SELECT COUNT(*) FROM assessments')
         total_assessments = cursor.fetchone()[0]
         cursor.execute('SELECT COUNT(*) FROM assessments WHERE status = "completed"')
@@ -1781,36 +1786,20 @@ def dashboard_stats():
         cursor.execute('SELECT COUNT(*) FROM assessments WHERE status = "in_progress"')
         in_progress_assessments = cursor.fetchone()[0]
         conn.close()
-        users_data = []
-        emails = []
-        for user in users:
-            decrypted_email = decrypt_data(user[2])
-            emails.append(decrypted_email)
-            users_data.append({
-                'id': user[0],
-                'name': decrypt_data(user[1]),
-                'email': decrypted_email,
-                'organization': decrypt_data(user[3]),
-                'role': decrypt_data(user[4]),
-                'is_confirmed': bool(user[5]),
-                'created_at': user[6],
-                'has_token': bool(user[7])
-            })
-        domain_to_company = get_company_mapping([(u['id'], u['name'], u['email']) for u in users_data])
-        unique_domains = set(domain_to_company.keys())
         return jsonify({
             'stats': {
                 'total_users': len(users),
-                'confirmed_users': len([u for u in users_data if u['is_confirmed']]),
-                'total_companies': len(unique_domains),
-                'total_assessments': total_assessments,
-                'completed_assessments': completed_assessments,
-                'in_progress_assessments': in_progress_assessments
+                'total_companies': total_companies,
+                'in_progress_assessments': in_progress_assessments,
+                'completed_assessments': completed_assessments
             }
         })
     except Exception as e:
         print(f"Dashboard stats error: {e}")
         return jsonify({"error": "Failed to fetch stats"}), 500
+
+def hash_email(email):
+    return hashlib.sha256(email.strip().lower().encode()).hexdigest()
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5002)

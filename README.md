@@ -1,3 +1,4 @@
+
 # 🚀 FinOps Maturity Assessment Platform
 
 A comprehensive, enterprise-grade platform for conducting FinOps maturity assessments with advanced security, user management, and detailed analytics.
@@ -7,6 +8,8 @@ A comprehensive, enterprise-grade platform for conducting FinOps maturity assess
 ![Flask](https://img.shields.io/badge/Flask-2.0+-lightgrey)
 ![Security](https://img.shields.io/badge/Security-Encrypted%20Data-brightgreen)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
+
+<script type="text/javascript" src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js" data-name="bmc-button" data-slug="uli6" data-color="#FFDD00" data-emoji="" data-font="Cookie" data-text="Buy me a coffee" data-outline-color="#000000" data-font-color="#000000" data-coffee-color="#ffffff" ></script>
 
 ## 📋 Table of Contents
 
@@ -555,7 +558,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ### Contact Information
 
-- **Maintainer**: [Your Name](mailto:contact@ulisses.xyz)
+- **Maintainer**: [Ulisses O.](mailto:contact@ulisses.xyz)
 - **Project URL**: [https://github.com/your-username/finops-assessment](https://github.com/your-username/finops-assessment)
 
 ---

@@ -290,93 +290,106 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>FinOps Assessment</h1>
-            <p>Professional FinOps Maturity Evaluation</p>
+    <div class="container" style="display: flex; flex-direction: row; gap: 32px; align-items: stretch; justify-content: center; max-width: 900px;">
+        <!-- Left: App Introduction -->
+        <div style="flex: 1 1 0; min-width: 260px; max-width: 350px; background: rgba(255,255,255,0.85); border-radius: 12px; padding: 32px 28px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); display: flex; flex-direction: column; justify-content: center;">
+            <h1 style="font-size: 2.1rem; color: #4a148c; margin-bottom: 6px; background: linear-gradient(135deg, #667eea, #764ba2); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">FinOps Assessment</h1>
+            <p style="color: #666; font-size: 1.1rem; margin-bottom: 18px;">AI Driven FinOps Maturity Evaluation</p>
+            
+            <p style="margin-bottom: 18px; color: #444;">This application helps organizations benchmark and improve their cloud financial operations (FinOps) practices.</p>
+            <ul style="list-style: none; padding: 0; margin: 0; font-size: 1.08rem; color: #333;">
+                <li>🔐 Secure, privacy-focused assessments</li>
+                <li>🤖 AI-powered recommendations</li>
+                <li>📊 Anonymous industry benchmarking</li>
+                <li>💡 Actionable best practices</li>
+                <li>📝 Save progress and continue anytime</li>
+                <li>🆓 100% free</li>
+            </ul>
+            <div style="display: flex; gap: 18px; justify-content: center; align-items: center; margin-top: 24px;">
+                <a href="https://www.buymeacoffee.com/uli6" target="_blank" title="Buy me a coffee">
+                    <img src="https://img.shields.io/badge/Buy%20me%20a%20coffee-%E2%98%95%EF%B8%8F-yellow?style=for-the-badge" alt="Buy Me a Coffee" style="height: 40px;" />
+                </a>
+                <a href="https://github.com/uli6/finops-assessment" target="_blank" title="View on GitHub" style="display: inline-block;">
+                    <svg height="32" width="32" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" style="vertical-align: middle; color: #24292f;">
+                        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path>
+                    </svg>
+                </a>
+            </div>
         </div>
-
-        <div class="tabs">
-            <button class="tab active" onclick="switchTab('login')">Login</button>
-            <button class="tab" onclick="switchTab('register')">Register</button>
-        </div>
-
-        <div class="form-container">
-            <div class="alert" id="alert"></div>
-
-            <!-- Login Form -->
-            <form class="login-form active" id="login-form">
-                <div class="help-text">
-                    <h4>🔐 How to Login:</h4>
-                    <ol>
-                        <li>Enter your registered email address</li>
-                        <li>Click "Send Magic Link"</li>
-                        <li>Check your email for the login link</li>
-                        <li>Click the link to login automatically</li>
-                    </ol>
-                </div>
-
-                <div class="form-group">
-                    <label for="login-email">Email Address</label>
-                    <input type="email" id="login-email" name="email" required>
-                </div>
-
-                <!-- Magic Link Section - Only show for Login -->
-                <div id="magicLinkSection" class="magic-link-section">
-                    <div class="info-box">
-                        <div class="info-icon">🔗</div>
-                        <div class="info-content">
-                            <h3>Magic Link Authentication</h3>
-                            <p>We'll send a secure login link to your email. No passwords needed!</p>
-                        </div>
+        <!-- Right: Login/Register -->
+        <div style="flex: 1 1 0; min-width: 320px; max-width: 500px;">
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('login')">Login</button>
+                <button class="tab" onclick="switchTab('register')">Register</button>
+            </div>
+            <div class="form-container">
+                <div class="alert" id="alert"></div>
+                <!-- Login Form -->
+                <form class="login-form active" id="login-form">
+                    <div class="help-text">
+                        <h4>🔐 How to Login:</h4>
+                        <ol>
+                            <li>Enter your registered email address</li>
+                            <li>Click "Send Magic Link"</li>
+                            <li>Check your email for the login link</li>
+                            <li>Click the link to login automatically</li>
+                        </ol>
                     </div>
-                    
-                    <button type="button" id="sendMagicLinkBtn" class="btn btn-primary">
-                        Send Magic Link
-                    </button>
-                </div>
-            </form>
-
-            <!-- Register Form -->
-            <form class="login-form" id="register-form">
-                <div class="help-text">
-                    <h4>📝 How to Register:</h4>
-                    <ol>
-                        <li>Fill in all required information</li>
-                        <li>Click "Register" to create your account</li>
-                        <li>Check your email for confirmation link</li>
-                        <li>Click confirmation link to verify your account</li>
-                        <li>Return here and use "Login" tab to access your account</li>
-                    </ol>
-                </div>
-
-                <div class="form-group">
-                    <label for="register-name">Full Name</label>
-                    <input type="text" id="register-name" name="name" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="register-email">Email Address</label>
-                    <input type="email" id="register-email" name="email" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="register-role">Role</label>
-                    <select id="register-role" name="role" required>
-                        <option value="">Select your role</option>
-                        <option value="FinOps Practitioner">FinOps Practitioner</option>
-                        <option value="Cloud Engineer">Cloud Engineer</option>
-                        <option value="DevOps Engineer">DevOps Engineer</option>
-                        <option value="Finance Manager">Finance Manager</option>
-                        <option value="IT Manager">IT Manager</option>
-                        <option value="CTO/CIO">CTO/CIO</option>
-                        <option value="Consultant">Consultant</option>
-                        <option value="Other">Other</option>
-                    </select>
-                </div>
-
-                <button type="submit" class="btn btn-primary">Register</button>
-            </form>
+                    <div class="form-group">
+                        <label for="login-email">Email Address</label>
+                        <input type="email" id="login-email" name="email" required>
+                    </div>
+                    <!-- Magic Link Section - Only show for Login -->
+                    <div id="magicLinkSection" class="magic-link-section">
+                        <div class="info-box">
+                            <div class="info-icon">🔗</div>
+                            <div class="info-content">
+                                <h3>Magic Link Authentication</h3>
+                                <p>We'll send a secure login link to your email. No passwords needed!</p>
+                            </div>
+                        </div>
+                        <button type="button" id="sendMagicLinkBtn" class="btn btn-primary">
+                            Send Magic Link
+                        </button>
+                    </div>
+                </form>
+                <!-- Register Form -->
+                <form class="login-form" id="register-form">
+                    <div class="help-text">
+                        <h4>📝 How to Register:</h4>
+                        <ol>
+                            <li>Fill in all required information</li>
+                            <li>Click "Register" to create your account</li>
+                            <li>Check your email for confirmation link</li>
+                            <li>Click confirmation link to verify your account</li>
+                            <li>Return here and use "Login" tab to access your account</li>
+                        </ol>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-name">Full Name</label>
+                        <input type="text" id="register-name" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-email">Email Address</label>
+                        <input type="email" id="register-email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-role">Role</label>
+                        <select id="register-role" name="role" required>
+                            <option value="">Select your role</option>
+                            <option value="FinOps Practitioner">FinOps Practitioner</option>
+                            <option value="Cloud Engineer">Cloud Engineer</option>
+                            <option value="DevOps Engineer">DevOps Engineer</option>
+                            <option value="Finance Manager">Finance Manager</option>
+                            <option value="IT Manager">IT Manager</option>
+                            <option value="CTO/CIO">CTO/CIO</option>
+                            <option value="Consultant">Consultant</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Register</button>
+                </form>
+            </div>
         </div>
     </div>
 

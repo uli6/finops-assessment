@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - FinOps Assessment</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+
+        .btn-secondary:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .admin-badge {
+            background: #28a745;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .new-assessment {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .new-assessment h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+        }
+
+        .assessment-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .scope-card {
+            background: #f8f9fa;
+            border: 2px solid #e1e5e9;
+            border-radius: 15px;
+            padding: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .scope-card:hover {
+            border-color: #667eea;
+            transform: translateY(-5px);
+        }
+
+        .scope-card.selected {
+            border-color: #667eea;
+            background: #e7f3ff;
+        }
+
+        .scope-card h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .scope-card p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .domain-selection {
+            margin-top: 20px;
+            display: none;
+        }
+
+        .domain-selection.show {
+            display: block;
+        }
+
+        .domain-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .domain-card {
+            background: white;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .domain-card:hover {
+            border-color: #28a745;
+        }
+
+        .domain-card.selected {
+            border-color: #28a745;
+            background: #e8f5e8;
+        }
+
+        .assessments-list {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .assessments-list h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+        }
+
+        .assessment-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .assessment-info h3 {
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .assessment-info p {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .assessment-meta {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .status-badge {
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-completed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-in-progress {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .assessment-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .btn-small {
+            padding: 8px 15px;
+            font-size: 12px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .empty-state h3 {
+            margin-bottom: 10px;
+            color: #667eea;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header {
+                flex-direction: column;
+                text-align: center;
+                gap: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .assessment-options {
+                grid-template-columns: 1fr;
+            }
+            
+            .domain-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .assessment-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>Welcome, {{ user_name }}! 👋</h1>
+                <p>Manage your FinOps maturity assessments</p>
+            </div>
+            <div class="header-actions">
+                {% if is_admin %}
+                <span class="admin-badge">Admin</span>
+                <a href="/debug/users" class="btn btn-secondary btn-small">User Management</a>
+                {% endif %}
+                <a href="/logout" class="btn btn-secondary">Logout</a>
+            </div>
+        </div>
+
+        <div class="new-assessment">
+            <h2>🚀 Start New Assessment</h2>
+            
+            <form id="assessment-form">
+                <div class="assessment-options">
+                    {% for scope in scopes %}
+                    <div class="scope-card" data-scope="{{ scope.id }}">
+                        <h3>{{ scope.name }}</h3>
+                        <p>{{ scope.description }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="domain-selection" id="domain-selection">
+                    <h3>Assessment Type</h3>
+                    <p>Choose between a complete assessment or focus on a specific domain:</p>
+                    
+                    <div class="domain-grid">
+                        <div class="domain-card" data-domain="">
+                            <h4>Complete Assessment</h4>
+                            <p>All domains (110 questions)</p>
+                        </div>
+                        {% for domain in domains %}
+                        <div class="domain-card" data-domain="{{ domain }}">
+                            <h4>{{ domain }}</h4>
+                            <p>Domain-specific assessment</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <button type="submit" class="btn" id="start-btn" disabled>Start Assessment</button>
+            </form>
+        </div>
+
+        <div class="assessments-list">
+            <h2>📊 Your Assessments</h2>
+            
+            {% if assessments %}
+                {% for assessment in assessments %}
+                <div class="assessment-item">
+                    <div class="assessment-info">
+                        <h3>
+                                                    {% for scope in scopes %}
+                        {% if scope.id == assessment[2] %}{{ scope.name }}{% endif %}
+                        {% endfor %}
+                        {% if assessment[3] %} - {{ assessment[3] }}{% endif %}
+                        </h3>
+                        <div class="assessment-meta">
+                                                    <span class="status-badge status-{{ assessment[4].replace('_', '-') }}">
+                        {{ assessment[4].replace('_', ' ').title() }}
+                        </span>
+                                                    <span>Created: {{ assessment[7][:10] if assessment[7] else 'N/A' }}</span>
+                        <span>Updated: {{ assessment[8][:10] if assessment[8] else 'N/A' }}</span>
+                        </div>
+                    </div>
+                    <div class="assessment-actions">
+                        {% if assessment[4] == 'completed' %}
+                            <a href="/get_assessment_results/{{ assessment[0] }}" class="btn btn-small">View Results</a>
+                        {% else %}
+                            <a href="/assessment" class="btn btn-small">Continue</a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <h3>No assessments yet</h3>
+                    <p>Start your first FinOps maturity assessment above!</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        let selectedScope = null;
+        let selectedDomain = null;
+
+        // Scope selection
+        document.querySelectorAll('.scope-card').forEach(card => {
+            card.addEventListener('click', function() {
+                // Remove previous selection
+                document.querySelectorAll('.scope-card').forEach(c => c.classList.remove('selected'));
+                
+                // Select current
+                this.classList.add('selected');
+                selectedScope = this.dataset.scope;
+                
+                // Show domain selection
+                document.getElementById('domain-selection').classList.add('show');
+                
+                updateStartButton();
+            });
+        });
+
+        // Domain selection
+        document.querySelectorAll('.domain-card').forEach(card => {
+            card.addEventListener('click', function() {
+                // Remove previous selection
+                document.querySelectorAll('.domain-card').forEach(c => c.classList.remove('selected'));
+                
+                // Select current
+                this.classList.add('selected');
+                selectedDomain = this.dataset.domain;
+                
+                updateStartButton();
+            });
+        });
+
+        function updateStartButton() {
+            const startBtn = document.getElementById('start-btn');
+            if (selectedScope && selectedDomain !== null) {
+                startBtn.disabled = false;
+            } else {
+                startBtn.disabled = true;
+            }
+        }
+
+        // Form submission
+        document.getElementById('assessment-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (!selectedScope || selectedDomain === null) {
+                alert('Please select a scope and assessment type.');
+                return;
+            }
+            
+            const startBtn = document.getElementById('start-btn');
+            const originalText = startBtn.textContent;
+            startBtn.textContent = 'Starting...';
+            startBtn.disabled = true;
+            
+            try {
+                const formData = new FormData();
+                formData.append('scope_id', selectedScope);
+                if (selectedDomain) {
+                    formData.append('domain', selectedDomain);
+                }
+                
+                const response = await fetch('/start_assessment', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    window.location.href = '/assessment';
+                } else {
+                    alert(result.message || 'Error starting assessment');
+                }
+            } catch (error) {
+                alert('Connection error. Please try again.');
+            } finally {
+                startBtn.textContent = originalText;
+                startBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
+

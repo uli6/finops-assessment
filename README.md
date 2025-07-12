@@ -1,6 +1,8 @@
 
 # 🚀 FinOps Maturity Assessment Platform
 
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-%E2%98%95%EF%B8%8F-yellow?style=for-the-badge)](https://www.buymeacoffee.com/uli6)
+
 A comprehensive, enterprise-grade platform for conducting FinOps maturity assessments with advanced security, user management, and detailed analytics.
 
 ![FinOps Assessment](https://img.shields.io/badge/FinOps-Maturity%20Assessment-blue)
@@ -8,8 +10,6 @@ A comprehensive, enterprise-grade platform for conducting FinOps maturity assess
 ![Flask](https://img.shields.io/badge/Flask-2.0+-lightgrey)
 ![Security](https://img.shields.io/badge/Security-Encrypted%20Data-brightgreen)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
-
-<script type="text/javascript" src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js" data-name="bmc-button" data-slug="uli6" data-color="#FFDD00" data-emoji="" data-font="Cookie" data-text="Buy me a coffee" data-outline-color="#000000" data-font-color="#000000" data-coffee-color="#ffffff" ></script>
 
 ## 📋 Table of Contents
 

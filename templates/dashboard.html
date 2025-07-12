@@ -296,7 +296,8 @@
             <div class="header-actions">
                 {% if is_admin %}
                 <span class="admin-badge">Admin</span>
-                <a href="/debug/users" class="btn btn-secondary btn-small">User Management</a>
+                {% else %}
+                <a href="/settings" class="btn btn-secondary btn-small">Settings</a>
                 {% endif %}
                 <a href="/logout" class="btn btn-secondary">Logout</a>
             </div>

@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, send_file
 import sqlite3
 import secrets
 import smtplib
@@ -21,6 +21,8 @@ import html
 from flask_wtf import CSRFProtect
 import uuid
 import bleach
+from weasyprint import HTML, CSS
+from io import BytesIO
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(32)
@@ -1490,110 +1492,193 @@ def get_assessment_results(assessment_id):
         print(f"[DEBUG] Full traceback: {traceback.format_exc()}")
         return render_template('error.html', message=f"An error occurred while retrieving assessment results: {e}"), 500
 
-@app.route('/debug/users')
-def debug_users():
-    if not is_admin():
+@app.route('/export_pdf/<int:assessment_id>')
+def export_pdf(assessment_id):
+    """Export assessment results as PDF"""
+    if 'user_id' not in session:
         return redirect('/')
     
-    return render_template('debug_users.html')
-
-@app.route('/debug/users/api')
-def debug_users_api():
-    if not is_admin():
-        return jsonify({"error": "Access denied. Admin privileges required."}), 403
-    
     try:
+        # Get assessment details (reuse logic from get_assessment_results)
         conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
+        
+        query = '''
+            SELECT id, user_id, scope_id, domain, status, overall_percentage, recommendations, created_at, updated_at
+            FROM assessments 
+            WHERE id = ? AND user_id = ?
+        '''
+        
+        cursor.execute(query, (assessment_id, session['user_id']))
+        assessment = cursor.fetchone()
+        
+        if not assessment:
+            conn.close()
+            return render_template('error.html', message="Assessment not found or you do not have access to it."), 404
+        
+        # Get scope information
+        scope_id = assessment[2]
+        scope = next((s for s in SCOPES if s['id'] == scope_id), None)
+        if not scope:
+            conn.close()
+            return render_template('error.html', message="Assessment scope not found."), 404
+        
+        # Get responses
         cursor.execute('''
-            SELECT id, name, email, organization, role, is_confirmed, is_admin, created_at, confirmation_token
-            FROM users 
-            ORDER BY created_at DESC
-        ''')
-        users = cursor.fetchall()
+            SELECT capability_id, lens_id, answer, score, improvement_suggestions
+            FROM responses 
+            WHERE assessment_id = ?
+        ''', (assessment_id,))
+        responses = cursor.fetchall()
         
-        cursor.execute('SELECT COUNT(*) FROM assessments')
-        total_assessments = cursor.fetchone()[0]
+        # Get user information
+        cursor.execute('SELECT name, organization FROM users WHERE id = ?', (session['user_id'],))
+        user_info = cursor.fetchone()
+        user_name = decrypt_data(user_info[0]) if user_info else "Unknown User"
+        organization = decrypt_data(user_info[1]) if user_info else "Unknown Organization"
         
-        cursor.execute('SELECT COUNT(*) FROM assessments WHERE status = "completed"')
-        completed_assessments = cursor.fetchone()[0]
-        
+        # Get benchmark data (other completed assessments with same scope)
+        cursor.execute('''
+            SELECT u.organization, a.id
+            FROM assessments a
+            JOIN users u ON a.user_id = u.id
+            WHERE a.scope_id = ? AND a.status = 'completed' AND a.id != ?
+            ORDER BY a.updated_at DESC
+            LIMIT 10
+        ''', (scope_id, assessment_id))
+        benchmark_assessments = cursor.fetchall()
+        if benchmark_assessments is None:
+            benchmark_assessments = []
         conn.close()
         
-        users_data = []
-        for user in users:
-            users_data.append({
-                'id': user[0],
-                'name': decrypt_data(user[1]),
-                'email': decrypt_data(user[2]),
-                'organization': decrypt_data(user[3]),
-                'role': decrypt_data(user[4]),
-                'is_confirmed': bool(user[5]),
-                'is_admin': bool(user[6]),
-                'created_at': user[7],
-                'has_token': bool(user[8])
-            })
-        
-        return jsonify({
-            'users': users_data,
-            'stats': {
-                'total_users': len(users),
-                'confirmed_users': len([u for u in users_data if u['is_confirmed']]),
-                'admin_users': len([u for u in users_data if u['is_admin']]),
-                'total_assessments': total_assessments,
-                'completed_assessments': completed_assessments
+        # Calculate scores (reuse logic from get_assessment_results)
+        results_matrix = {}
+        total_score = 0
+        total_possible = 0
+        for response in responses:
+            capability_id, lens_id, answer, score, improvement = response
+            if not capability_id or not lens_id:
+                continue
+            if capability_id not in results_matrix:
+                results_matrix[capability_id] = {}
+            results_matrix[capability_id][lens_id] = {
+                'score': score or 0,
+                'answer': answer,
+                'improvement': improvement or 'No suggestions available'
             }
-        })
+            score_value = score or 0
+            total_score += score_value
+            total_possible += 4
+        
+        # Calculate overall percentage
+        overall_percentage = round((total_score / total_possible) * 100) if total_possible > 0 else 0
+        
+        # Generate benchmark data
+        benchmark_data = []
+        user_score = None
+        other_scores = []
+        if len(benchmark_assessments) >= 1:
+            for i, (org_name, bench_id) in enumerate(benchmark_assessments):
+                if not bench_id:
+                    continue
+                conn = sqlite3.connect(DATABASE)
+                cursor = conn.cursor()
+                cursor.execute('SELECT score FROM responses WHERE assessment_id = ?', (bench_id,))
+                bench_responses = cursor.fetchall()
+                conn.close()
+                bench_total = sum(r[0] or 0 for r in bench_responses)
+                bench_possible = len(bench_responses) * 4
+                bench_percentage = round((bench_total / bench_possible) * 100) if bench_possible > 0 else 0
+                benchmark_data.append({
+                    'organization': f"Company {chr(65 + i)}",
+                    'overall_percentage': bench_percentage
+                })
+            benchmark_data.append({
+                'organization': 'Your Organization',
+                'overall_percentage': overall_percentage
+            })
+            benchmark_data.sort(key=lambda x: x['overall_percentage'], reverse=True)
+            for org in benchmark_data:
+                if org['organization'] == 'Your Organization':
+                    user_score = org['overall_percentage']
+                else:
+                    other_scores.append(org['overall_percentage'])
+            industry_avg = round(sum(other_scores) / len(other_scores), 1) if other_scores else 0
+        else:
+            user_score = overall_percentage
+            industry_avg = 0
+        
+        # Get capabilities for display
+        domain = assessment[3]
+        if domain:
+            capabilities = [c for c in CAPABILITIES if c['domain'] == domain]
+        else:
+            capabilities = CAPABILITIES
+        
+        # Get recommendations
+        recommendations = assessment[6] if len(assessment) > 6 and assessment[6] else None
+        
+        # Generate PDF content
+        html_content = render_template('pdf_results.html',
+                                     assessment=assessment,
+                                     scope=scope,
+                                     domain=domain,
+                                     capabilities=capabilities,
+                                     results_matrix=results_matrix,
+                                     total_score=total_score,
+                                     total_possible=total_possible,
+                                     overall_percentage=overall_percentage,
+                                     user_name=user_name,
+                                     organization=organization,
+                                     recommendations=recommendations,
+                                     benchmark_data=benchmark_data,
+                                     user_score=user_score,
+                                     industry_avg=industry_avg,
+                                     lenses=LENSES)
+        
+        # Convert HTML to PDF
+        pdf = HTML(string=html_content).write_pdf()
+        
+        # Create BytesIO object and return as file
+        pdf_buffer = BytesIO(pdf if pdf else b'')
+        pdf_buffer.seek(0)
+        
+        filename = f"finops_assessment_{assessment_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        
+        return send_file(
+            pdf_buffer,
+            as_attachment=True,
+            download_name=filename,
+            mimetype='application/pdf'
+        )
         
     except Exception as e:
-        print(f"Debug users error: {e}")
-        return jsonify({"error": "Failed to fetch user data"}), 500
+        print(f"PDF export error: {e}")
+        import traceback
+        print(f"[DEBUG] PDF export traceback: {traceback.format_exc()}")
+        return render_template('error.html', message=f"An error occurred while generating PDF: {e}"), 500
 
-@app.route('/remove_user/<int:user_id>', methods=['DELETE'])
-def remove_user(user_id):
-    if not is_admin():
-        return jsonify({"error": "Access denied. Admin privileges required."}), 403
-    
-    try:
-        conn = sqlite3.connect(DATABASE)
-        cursor = conn.cursor()
-        
-        # Check if user exists and is not an admin
-        cursor.execute('SELECT is_admin FROM users WHERE id = ?', (user_id,))
-        user = cursor.fetchone()
-        
-        if not user:
-            conn.close()
-            return jsonify({"error": "User not found"}), 404
-        
-        if user[0]:  # is_admin
-            conn.close()
-            return jsonify({"error": "Cannot remove admin users"}), 403
-        
-        # Delete user's assessments and responses
-        cursor.execute('DELETE FROM responses WHERE assessment_id IN (SELECT id FROM assessments WHERE user_id = ?)', (user_id,))
-        cursor.execute('DELETE FROM assessments WHERE user_id = ?', (user_id,))
-        cursor.execute('DELETE FROM users WHERE id = ?', (user_id,))
-        
-        conn.commit()
-        conn.close()
-        
-        return jsonify({"status": "success", "message": "User removed successfully"})
-        
-    except Exception as e:
-        print(f"Remove user error: {e}")
-        return jsonify({"error": "Failed to remove user"}), 500
+def get_company_mapping(users):
+    """Return a mapping of email domain to anonymized company name (Company A, B, ...)."""
+    domains = []
+    domain_to_company = {}
+    for user in users:
+        email = user[2]  # decrypted email
+        domain = email.split('@')[1].lower() if '@' in email else 'unknown'
+        if domain not in domains:
+            domains.append(domain)
+        idx = domains.index(domain)
+        domain_to_company[domain] = f"Company {chr(65 + (idx % 26))}"
+    return domain_to_company
 
 @app.route('/debug/benchmarks/api')
 def debug_benchmarks_api():
     if not is_admin():
         return jsonify({"error": "Access denied. Admin privileges required."}), 403
-    
     try:
         conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
-        
-        # Get all completed assessments with organization data
+        # Get all completed assessments with user email
         cursor.execute('''
             SELECT 
                 a.id,
@@ -1601,15 +1686,14 @@ def debug_benchmarks_api():
                 a.domain,
                 a.overall_percentage,
                 a.created_at,
-                u.organization
+                u.email
             FROM assessments a
             JOIN users u ON a.user_id = u.id
             WHERE a.status = 'completed'
             ORDER BY a.created_at DESC
         ''')
         assessments = cursor.fetchall()
-        
-        # Get benchmark statistics by scope
+        # Restore scope/domain stats queries
         cursor.execute('''
             SELECT 
                 scope_id,
@@ -1622,8 +1706,6 @@ def debug_benchmarks_api():
             GROUP BY scope_id
         ''')
         scope_stats = cursor.fetchall()
-        
-        # Get benchmark statistics by domain
         cursor.execute('''
             SELECT 
                 domain,
@@ -1636,21 +1718,24 @@ def debug_benchmarks_api():
             GROUP BY domain
         ''')
         domain_stats = cursor.fetchall()
-        
         conn.close()
-        
-        # Process assessment data
+        # Build domain to company mapping
+        emails = [decrypt_data(a[5]) for a in assessments]
+        domain_to_company = get_company_mapping([(None, None, e) for e in emails])
+        # Process assessment data with anonymized company
         assessments_data = []
-        for assessment in assessments:
+        for idx, assessment in enumerate(assessments):
+            email = decrypt_data(assessment[5])
+            domain = email.split('@')[1].lower() if '@' in email else 'unknown'
+            company = domain_to_company[domain]
             assessments_data.append({
                 'id': assessment[0],
                 'scope_id': assessment[1],
                 'domain': assessment[2],
                 'overall_percentage': assessment[3],
                 'created_at': assessment[4],
-                'organization': decrypt_data(assessment[5]) if assessment[5] else 'Unknown'
+                'company': company
             })
-        
         # Process scope statistics
         scope_benchmarks = {}
         for scope_stat in scope_stats:
@@ -1663,7 +1748,6 @@ def debug_benchmarks_api():
                 'min_percentage': scope_stat[3] if scope_stat[3] else 0,
                 'max_percentage': scope_stat[4] if scope_stat[4] else 0
             }
-        
         # Process domain statistics
         domain_benchmarks = {}
         for domain_stat in domain_stats:
@@ -1674,7 +1758,6 @@ def debug_benchmarks_api():
                 'min_percentage': domain_stat[3] if domain_stat[3] else 0,
                 'max_percentage': domain_stat[4] if domain_stat[4] else 0
             }
-        
         return jsonify({
             'assessments': assessments_data,
             'scope_benchmarks': scope_benchmarks,
@@ -1683,10 +1766,77 @@ def debug_benchmarks_api():
             'scopes': SCOPES,
             'domains': DOMAINS
         })
-        
     except Exception as e:
         print(f"Debug benchmarks error: {e}")
         return jsonify({"error": "Failed to fetch benchmark data"}), 500
+
+@app.route('/settings')
+def settings():
+    if 'user_id' not in session:
+        return redirect('/')
+    
+    try:
+        conn = sqlite3.connect(DATABASE)
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT name, email, organization, role, created_at
+            FROM users 
+            WHERE id = ?
+        ''', (session['user_id'],))
+        user = cursor.fetchone()
+        conn.close()
+        
+        if not user:
+            return redirect('/')
+        
+        return render_template('settings.html',
+                             user_name=decrypt_data(user[0]),
+                             user_email=decrypt_data(user[1]),
+                             user_organization=decrypt_data(user[2]),
+                             user_role=decrypt_data(user[3]),
+                             user_created_at=user[4][:10] if user[4] and user[4] != 'None' else 'Unknown')
+        
+    except Exception as e:
+        print(f"Settings error: {e}")
+        return redirect('/')
+
+@app.route('/delete_account', methods=['DELETE'])
+def delete_account():
+    if 'user_id' not in session:
+        return jsonify({"status": "error", "message": "Please log in first"}), 401
+    
+    try:
+        conn = sqlite3.connect(DATABASE)
+        cursor = conn.cursor()
+        
+        # Check if user exists and is not an admin
+        cursor.execute('SELECT is_admin FROM users WHERE id = ?', (session['user_id'],))
+        user = cursor.fetchone()
+        
+        if not user:
+            conn.close()
+            return jsonify({"status": "error", "message": "User not found"}), 404
+        
+        if user[0]:  # is_admin
+            conn.close()
+            return jsonify({"status": "error", "message": "Admin accounts cannot be deleted"}), 403
+        
+        # Delete user's assessments and responses
+        cursor.execute('DELETE FROM responses WHERE assessment_id IN (SELECT id FROM assessments WHERE user_id = ?)', (session['user_id'],))
+        cursor.execute('DELETE FROM assessments WHERE user_id = ?', (session['user_id'],))
+        cursor.execute('DELETE FROM users WHERE id = ?', (session['user_id'],))
+        
+        conn.commit()
+        conn.close()
+        
+        # Clear session
+        session.clear()
+        
+        return jsonify({"status": "success", "message": "Account deleted successfully"})
+        
+    except Exception as e:
+        print(f"Delete account error: {e}")
+        return jsonify({"status": "error", "message": "Failed to delete account"}), 500
 
 @app.route('/logout')
 def logout():

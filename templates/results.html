@@ -657,7 +657,7 @@
         <div class="actions-section">
             <a href="/dashboard" class="btn btn-secondary">Back to Dashboard</a>
             <button class="btn" onclick="window.print()">Print Results</button>
-            <button class="btn" onclick="exportResults()">Export Data</button>
+            <button class="btn" onclick="exportPDF()">Export PDF</button>
         </div>
     </div>
 
@@ -705,28 +705,8 @@
             document.getElementById('detail-modal').style.display = 'none';
         }
 
-        function exportResults() {
-            const data = {
-                assessment_id: {{ assessment[0] }},
-                scope: '{{ scope.name }}',
-                domain: '{{ domain or "Complete" }}',
-                overall_percentage: {{ overall_percentage }},
-                total_score: {{ total_score }},
-                total_possible: {{ total_possible }},
-                lens_scores: {{ lens_scores | tojson }},
-                results_matrix: resultsMatrix
-                // benchmark_data removido
-            };
-            
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `finops_assessment_results_{{ assessment[0] }}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+        function exportPDF() {
+            window.location.href = '/export_pdf/{{ assessment[0] }}';
         }
 
         // Close modal when clicking outside

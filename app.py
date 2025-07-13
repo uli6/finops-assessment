@@ -2,6 +2,7 @@ from flask import Flask
 import secrets
 import os
 import logging
+from dotenv import load_dotenv
 from models.database import init_db
 from routes.auth import auth_bp
 from routes.assessment import assessment_bp
@@ -9,6 +10,9 @@ from routes.admin import admin_bp
 from routes.utils import utils_bp, markdown_filter
 from config import DATABASE, UPLOAD_FOLDER, ENCRYPTION_KEY_FILE
 from flask_talisman import Talisman
+
+# Load environment variables from .env file
+load_dotenv()
 
 app = Flask(__name__)
 

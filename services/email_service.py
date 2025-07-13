@@ -41,7 +41,9 @@ def send_email(to_email, subject, body):
 
 def send_confirmation_email(email, token):
     """Send email confirmation"""
-    confirmation_link = f"http://localhost:5002/confirm_email/{token}"
+    # Get base URL from environment or default to localhost
+    base_url = os.getenv('BASE_URL', 'http://localhost:5002')
+    confirmation_link = f"{base_url}/confirm_email/{token}"
     
     subject = "Confirm Your FinOps Assessment Account"
     body = f"""
@@ -64,7 +66,9 @@ def send_confirmation_email(email, token):
 
 def send_magic_link(email, token):
     """Send magic login link"""
-    login_link = f"http://localhost:5002/magic_login/{token}"
+    # Get base URL from environment or default to localhost
+    base_url = os.getenv('BASE_URL', 'http://localhost:5002')
+    login_link = f"{base_url}/magic_login/{token}"
     
     subject = "Your FinOps Assessment Login Link"
     body = f"""

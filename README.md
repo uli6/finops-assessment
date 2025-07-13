@@ -19,15 +19,24 @@ A privacy-focused FinOps Maturity Assessment platform that helps organizations e
 - **Multi-lens evaluation**: Knowledge, Process, Metrics, Adoption, Automation
 - **AI-powered analysis**: ChatGPT analyzes text responses for maturity evaluation
 - **Evidence-based scoring**: AI considers detailed responses for accurate assessments
-- **PDF export**: Professional assessment reports with anonymized data
+- **Professional PDF export**: Comprehensive assessment reports with anonymized data
+- **Excel XLSX export**: Results matrix in spreadsheet format for data analysis
 
 ### User Experience
 - **Email confirmation required** - Users only saved after confirming email
+- **Confirmation landing page** - After confirming your email, you are greeted with a dedicated page announcing successful confirmation, login instructions, and a button to access the login page
 - **Magic link authentication** - Secure, passwordless login
 - **Real-time progress tracking** - Save and resume assessments
 - **AI-powered recommendations** - Personalized improvement suggestions
 - **Dashboard analytics** - Company benchmarks and progress tracking
 - **Responsive design** - Works on desktop and mobile
+- **Interactive results matrix** - Click scores for detailed responses and suggestions
+
+### Export & Reporting
+- **PDF Reports**: Professional, comprehensive reports with all assessment data
+- **Excel Export**: Results matrix in XLSX format with color-coded scores
+- **Print-friendly**: Browser print functionality for quick sharing
+- **Multi-format support**: PDF, Excel, and print options
 
 ## 🚀 Quick Start
 
@@ -143,16 +152,18 @@ Each domain contains multiple FinOps capabilities:
 ## 🛠️ Technical Stack
 
 ### Backend
-- **Flask**: Web framework
-- **SQLite**: Database
-- **Cryptography**: Data encryption
-- **WeasyPrint**: PDF generation
+- **Flask**: Web framework with modular architecture
+- **SQLite**: Database with automatic migrations
+- **Cryptography**: Data encryption and security
+- **WeasyPrint**: Professional PDF generation
+- **OpenPyXL**: Excel XLSX file generation
 - **OpenAI**: AI-powered analysis and recommendations
 
 ### Frontend
 - **HTML/CSS/JavaScript**: Responsive design
 - **Chart.js**: Interactive dashboard charts
 - **Markdown**: Rich text formatting
+- **Modern UI**: Clean, professional interface
 
 ### Security
 - **Flask-WTF**: CSRF protection
@@ -166,20 +177,38 @@ finops-assessment/
 ├── app.py                 # Main Flask application
 ├── requirements.txt       # Python dependencies
 ├── privacy_notice.md     # Privacy policy
-├── reprocess_recommendations.py # AI recommendation script
+├── finops_assessment.db  # SQLite database
 
-├── templates/            # HTML templates
+├── routes/               # Modular route handlers
+│   ├── auth.py          # Authentication routes
+│   ├── assessment.py    # Assessment routes
+│   ├── dashboard.py     # Dashboard routes
+│   └── utils.py         # Utility routes (PDF/XLSX export)
+
+├── services/            # Business logic
+│   ├── assessment.py    # Assessment processing
+│   ├── auth.py          # Authentication services
+│   └── email.py         # Email services
+
+├── models/              # Data models
+│   ├── user.py          # User model
+│   ├── assessment.py    # Assessment model
+│   └── response.py      # Response model
+
+├── data/                # Static data
+│   ├── capabilities.py  # FinOps capabilities
+│   └── questions.py     # Assessment questions
+
+├── templates/           # HTML templates
 │   ├── login.html       # Login/registration page
 │   ├── dashboard.html   # User dashboard
 │   ├── assessment.html  # Assessment interface
 │   ├── results.html     # Assessment results
-│   ├── settings.html    # Account settings
-│   ├── pdf_results.html # PDF export template
-│   ├── login_error.html # Login error page
-│   ├── email_confirmed.html # Email confirmation page
-│   └── email_error.html # Email error page
+│   ├── pdf_report.html  # PDF export template
+│   └── settings.html    # Account settings
 
-└── finops_assessment.db # SQLite database
+└── uploads/            # File uploads
+    └── *.pdf          # Uploaded documents
 ```
 
 ## 🔧 Configuration
@@ -199,21 +228,31 @@ The application automatically creates and migrates the SQLite database on startu
 ### Registration Flow
 1. **Register** with corporate email address
 2. **Confirm email** via confirmation link
-3. **Login** with magic link
-4. **Start assessment** for your chosen domain
+3. **After confirmation, you are taken to a landing page announcing your email is confirmed, with clear instructions and a button to access the login page.**
+4. **Login** with magic link
+5. **Start assessment** for your chosen domain
 
 ### Assessment Process
 1. **Select domain** (Understanding Usage & Cost, Quantify Business Value, etc.)
 2. **Answer questions** for each capability and lens
 3. **Get AI-powered insights** based on your responses
 4. **View recommendations** for improvement
-5. **Export PDF report** with anonymized data
+5. **Export results** in PDF or Excel format
 
 ### Dashboard Features
 - **Company benchmarks**: Compare your scores to industry averages
 - **Domain-specific charts**: Visual progress tracking per domain
 - **Assessment history**: Track all completed assessments
 - **Privacy-focused analytics**: Anonymous benchmarking
+- **Statistics overview**: User and assessment counts
+
+### Results & Export Features
+- **Interactive matrix**: Click scores for detailed responses
+- **PDF reports**: Professional, comprehensive assessment reports
+- **Excel export**: Results matrix in XLSX format with color coding
+- **Print functionality**: Browser-based printing
+- **Benchmark comparisons**: Industry average comparisons
+- **AI recommendations**: Personalized improvement suggestions
 
 ### Privacy Features
 - **Anonymous company names**: Company A, Company B, etc.
@@ -246,27 +285,4 @@ python app.py
 
 ## 📄 License
 
-This project is licensed under the MIT License.
-
-## 🆘 Support
-
-For issues and questions:
-1. Check email configuration and environment variables
-2. Test email setup by trying to register
-3. Review the logs for error messages
-4. Ensure corporate email domains are used (no public email providers)
-5. Verify OpenAI API key is set for AI recommendations
-
-## 🔄 Recent Updates
-
-- **Privacy-focused redesign**: Removed all personal data storage
-- **Email confirmation flow**: Users only saved after email confirmation
-- **Admin functionality removed**: Single-role, privacy-first approach
-- **Enhanced security**: Improved authentication and data protection
-- **Better UX**: Simplified registration and login process
-- **AI-powered recommendations**: Personalized improvement suggestions
-- **Dashboard analytics**: Company benchmarks and progress tracking
-- **New assessment framework**: Updated to latest FinOps Foundation standards
-- **Domain-specific assessments**: Focus on specific FinOps domains
-- **Interactive charts**: Visual progress tracking with Chart.js
-- **Enhanced PDF reports**: Professional assessment reports with recommendations 
+This project is licensed under the MIT License. 

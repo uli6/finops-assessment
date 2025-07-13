@@ -20,6 +20,7 @@ def register():
     """Handle user registration"""
     data = request.get_json()
     email = data.get('email', '').strip().lower()
+    company_role = data.get('company_role', '').strip()
     
     if not email or '@' not in email:
         return jsonify({'error': 'Valid email is required'}), 400
@@ -44,9 +45,9 @@ def register():
     
     # Create user (unconfirmed)
     cursor.execute('''
-        INSERT INTO users (email_hash, company_hash, confirmation_token, is_confirmed, created_at)
-        VALUES (?, ?, ?, 0, ?)
-    ''', (email_hash, company_hash, token, datetime.now()))
+        INSERT INTO users (email_hash, company_hash, confirmation_token, is_confirmed, created_at, company_role)
+        VALUES (?, ?, ?, 0, ?, ?)
+    ''', (email_hash, company_hash, token, datetime.now(), company_role))
     
     user_id = cursor.lastrowid
     conn.commit()
@@ -126,7 +127,7 @@ def magic_login(token):
     conn.close()
     
     session['user_id'] = user[0]
-    return redirect(url_for('dashboard'))
+    return redirect(url_for('assessment.dashboard'))
 
 @auth_bp.route('/confirm_email/<token>')
 def confirm_email(token):
@@ -147,7 +148,7 @@ def confirm_email(token):
     conn.commit()
     conn.close()
     
-    return render_template('login.html', message='Email confirmed! You can now log in with your magic link.')
+    return render_template('email_confirmed.html')
 
 @auth_bp.route('/logout')
 def logout():

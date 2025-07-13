@@ -331,11 +331,35 @@
             </div>
         </div>
         <div id="stats-grid" class="stats-grid" style="margin-bottom: 30px;"></div>
+        
+        <!-- Dashboard Statistics -->
+        <div class="new-assessment">
+            <h2>📊 Platform Statistics</h2>
+            <p style="color: #666; margin-bottom: 20px;">Overview of FinOps Assessment Platform usage</p>
+            <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+                <div class="stat-card" style="background: #f8f9fa; border-radius: 12px; padding: 20px; text-align: center; border-left: 4px solid #667eea;">
+                    <div class="stat-number" style="font-size: 2rem; font-weight: bold; color: #667eea;">{{ total_users }}</div>
+                    <div class="stat-label" style="color: #666; margin-top: 5px;">Registered Users</div>
+                </div>
+                <div class="stat-card" style="background: #f8f9fa; border-radius: 12px; padding: 20px; text-align: center; border-left: 4px solid #28a745;">
+                    <div class="stat-number" style="font-size: 2rem; font-weight: bold; color: #28a745;">{{ total_companies }}</div>
+                    <div class="stat-label" style="color: #666; margin-top: 5px;">Companies</div>
+                </div>
+                <div class="stat-card" style="background: #f8f9fa; border-radius: 12px; padding: 20px; text-align: center; border-left: 4px solid #ffc107;">
+                    <div class="stat-number" style="font-size: 2rem; font-weight: bold; color: #ffc107;">{{ assessments_in_progress }}</div>
+                    <div class="stat-label" style="color: #666; margin-top: 5px;">Assessments in Progress</div>
+                </div>
+                <div class="stat-card" style="background: #f8f9fa; border-radius: 12px; padding: 20px; text-align: center; border-left: 4px solid #17a2b8;">
+                    <div class="stat-number" style="font-size: 2rem; font-weight: bold; color: #17a2b8;">{{ assessments_completed }}</div>
+                    <div class="stat-label" style="color: #666; margin-top: 5px;">Completed Assessments</div>
+                </div>
+            </div>
+        </div>
 
         <!-- Company Comparison Chart -->
         <div class="new-assessment">
-            <h2>🏢 Company Performance Comparison</h2>
-            <p style="color: #666; margin-bottom: 20px;">Compare your company's latest performance across all FinOps domains against industry benchmarks.</p>
+            <h2>🏢 Company vs Industry Maturity by Domain</h2>
+            <p style="color: #666; margin-bottom: 20px;">See how your company's maturity in each FinOps domain compares to the industry average.</p>
             <div id="company-comparison-chart" style="height: 400px; position: relative;">
                 <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #aaa; font-size: 1.1rem;">
                     Loading comparison data...
@@ -350,7 +374,7 @@
                     <h3>Choose a Domain</h3>
                     <p>Select a FinOps domain to begin your assessment:</p>
                     <div class="domain-grid">
-                        <div class="domain-card" data-domain="">
+                        <div class="domain-card" data-domain="Complete Assessment">
                             <h4>Complete Assessment</h4>
                             <p>All domains (110 questions)</p>
                         </div>
@@ -385,22 +409,17 @@
                 {% for assessment in assessments %}
                 <div class="assessment-item">
                     <div class="assessment-info">
-                        <h3>
-                                                    {% for scope in scopes %}
-                        {% if scope.id == assessment[2] %}{{ scope.name }}{% endif %}
-                        {% endfor %}
-                        {% if assessment[3] %} - {{ assessment[3] }}{% endif %}
-                        </h3>
+                        <h3>{{ assessment[2] }}{% if assessment[3] %} - {{ assessment[3] }}{% endif %}</h3>
                         <div class="assessment-meta">
-                                                    <span class="status-badge status-{{ assessment[4].replace('_', '-') }}">
-                        {{ assessment[4].replace('_', ' ').title() }}
-                        </span>
-                                                    <span>Created: {{ assessment[7][:10] if assessment[7] else 'N/A' }}</span>
-                        <span>Updated: {{ assessment[8][:10] if assessment[8] else 'N/A' }}</span>
+                            <span class="status-badge status-{{ assessment[3].replace('_', '-') }}">
+                                {{ assessment[3].replace('_', ' ').title() }}
+                            </span>
+                            <span>Created: {{ assessment[5][:10] if assessment[5] else 'N/A' }}</span>
+                            <span>Updated: {{ assessment[6][:10] if assessment[6] else 'N/A' }}</span>
                         </div>
                     </div>
                     <div class="assessment-actions">
-                        {% if assessment[4] == 'completed' %}
+                        {% if assessment[3] == 'completed' %}
                             <a href="/get_assessment_results/{{ assessment[0] }}" class="btn btn-small">View Results</a>
                         {% else %}
                             <a href="/assessment" class="btn btn-small">Continue</a>
@@ -426,17 +445,21 @@
                 document.querySelectorAll('.domain-card').forEach(c => c.classList.remove('selected'));
                 this.classList.add('selected');
                 selectedDomain = this.dataset.domain;
+                console.log('Selected domain:', selectedDomain);
                 updateStartButton();
             });
         });
         function updateStartButton() {
             const startBtn = document.getElementById('start-btn');
-            startBtn.disabled = !selectedDomain;
+            // Allow empty string for "Complete Assessment"
+            startBtn.disabled = selectedDomain === null;
+            console.log('Start button disabled:', startBtn.disabled);
         }
         // Form submission
         document.getElementById('assessment-form').addEventListener('submit', async function(e) {
             e.preventDefault();
-            if (!selectedDomain) {
+            console.log('Form submitted, selected domain:', selectedDomain);
+            if (selectedDomain === null) {
                 alert('Please select a domain.');
                 return;
             }
@@ -447,17 +470,21 @@
             try {
                 const formData = new FormData();
                 formData.append('domain', selectedDomain);
+                console.log('Sending request to /start_assessment with domain:', selectedDomain);
                 const response = await fetch('/start_assessment', {
                     method: 'POST',
                     body: formData
                 });
+                console.log('Response status:', response.status);
                 const result = await response.json();
+                console.log('Response result:', result);
                 if (result.status === 'success') {
                     window.location.href = '/assessment';
                 } else {
                     alert(result.message || 'Error starting assessment');
                 }
             } catch (error) {
+                console.error('Error:', error);
                 alert('Connection error. Please try again.');
             } finally {
                 startBtn.textContent = originalText;
@@ -504,81 +531,77 @@
             try {
                 const res = await fetch('/company_benchmarks');
                 const data = await res.json();
-                
-                if (data.status === 'success' && data.data) {
-                    const companyData = data.data.company;
-                    const industryData = data.data.industry;
-                    
-                    // Use the global DOMAINS list
-                    const domains = window.FINOPS_DOMAINS;
-                    const companyScores = [];
-                    const industryScores = [];
-                    
-                    domains.forEach(domain => {
-                        // Always show both bars: if missing, use 0
-                        companyScores.push(companyData[domain] && companyData[domain].overall_percentage ? companyData[domain].overall_percentage : 0);
-                        industryScores.push(industryData[domain] && industryData[domain].average ? industryData[domain].average : 0);
-                    });
-                    
-                    if (domains.length > 0) {
-                        const ctx = document.getElementById('company-comparison-chart');
-                        ctx.innerHTML = '<canvas id="comparison-chart"></canvas>';
-                        
-                        new Chart(document.getElementById('comparison-chart'), {
-                            type: 'bar',
-                            data: {
-                                labels: domains,
-                                datasets: [
-                                    {
-                                        label: 'Your Company',
-                                        data: companyScores,
-                                        backgroundColor: '#667eea',
-                                        borderRadius: 8
-                                    },
-                                    {
-                                        label: 'Industry Average',
-                                        data: industryScores,
-                                        backgroundColor: '#aaa',
-                                        borderRadius: 8
-                                    }
-                                ]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                plugins: {
-                                    legend: {
-                                        position: 'top',
-                                        labels: {
-                                            usePointStyle: true,
-                                            padding: 20
-                                        }
-                                    },
-                                    title: {
-                                        display: true,
-                                        text: 'Company vs Industry Performance by Domain',
-                                        font: {
-                                            size: 16,
-                                            weight: 'bold'
-                                        }
+                if (data.domains && data.company_scores && data.industry_avgs) {
+                    const domains = data.domains;
+                    const companyScores = data.company_scores;
+                    const industryScores = data.industry_avgs;
+
+                    const ctx = document.getElementById('company-comparison-chart');
+                    ctx.innerHTML = '<canvas id="comparison-chart"></canvas>';
+
+                    new Chart(document.getElementById('comparison-chart'), {
+                        type: 'bar',
+                        data: {
+                            labels: domains,
+                            datasets: [
+                                {
+                                    label: 'Your Company',
+                                    data: companyScores.map(x => x === null ? null : x),
+                                    backgroundColor: '#667eea',
+                                    borderRadius: 8
+                                },
+                                {
+                                    label: 'Industry Average',
+                                    data: industryScores.map(x => x === null ? null : x),
+                                    backgroundColor: '#aaa',
+                                    borderRadius: 8
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'top',
+                                    labels: {
+                                        usePointStyle: true,
+                                        padding: 20
                                     }
                                 },
-                                scales: {
-                                    y: {
-                                        display: false,
-                                        beginAtZero: true,
-                                        max: 100
-                                    },
-                                    x: {
-                                        grid: { display: false }
+                                title: {
+                                    display: true,
+                                    text: 'Company vs Industry Maturity by Domain',
+                                    font: {
+                                        size: 16,
+                                        weight: 'bold'
+                                    }
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            const value = context.parsed.y;
+                                            if (value === null || value === undefined) {
+                                                return context.dataset.label + ': N/A';
+                                            }
+                                            return context.dataset.label + ': ' + value.toFixed(1) + '%';
+                                        }
                                     }
                                 }
+                            },
+                            scales: {
+                                y: {
+                                    display: false,
+                                    beginAtZero: true,
+                                    min: 0,
+                                    max: 100
+                                },
+                                x: {
+                                    grid: { display: false }
+                                }
                             }
-                        });
-                    } else {
-                        document.getElementById('company-comparison-chart').innerHTML = 
-                            '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #666; font-size: 1.1rem;">No comparison data available yet. Complete some assessments to see your company\'s performance compared to industry benchmarks.</div>';
-                    }
+                        }
+                    });
                 } else {
                     document.getElementById('company-comparison-chart').innerHTML = 
                         '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #666; font-size: 1.1rem;">Unable to load comparison data.</div>';

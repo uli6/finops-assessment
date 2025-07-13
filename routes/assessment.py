@@ -5,7 +5,7 @@ import random
 from datetime import datetime
 from models.database import get_db_connection
 from services.ai_service import evaluate_finops_maturity, generate_recommendations
-from data.capabilities import CAPABILITIES, SCOPES, DOMAINS, QUESTIONS, LENSES
+from data.capabilities import CAPABILITIES, LENSES, DOMAINS, QUESTIONS, ANSWER_OPTIONS
 from config import DATABASE
 
 assessment_bp = Blueprint('assessment', __name__)
@@ -28,29 +28,68 @@ def dashboard():
     ''', (session['user_id'],))
     assessments = cursor.fetchall()
     
-    # Get company benchmarks
+    # Get domain-specific benchmarks for dashboard
     cursor.execute('''
-        SELECT domain, AVG(overall_percentage) as avg_score, COUNT(*) as count
-        FROM assessments 
-        WHERE status = 'completed' 
-        GROUP BY domain
+        SELECT 
+            a.domain,
+            AVG(a.overall_percentage) as avg_score,
+            COUNT(DISTINCT u.company_hash) as unique_companies
+        FROM assessments a
+        JOIN users u ON a.user_id = u.id
+        WHERE a.status = 'completed'
+        GROUP BY a.domain
+        HAVING COUNT(DISTINCT u.company_hash) >= 1
     ''')
     benchmarks = cursor.fetchall()
     
+    # Get dashboard statistics
+    cursor.execute('SELECT COUNT(*) FROM users WHERE is_confirmed = 1')
+    total_users = cursor.fetchone()[0]
+    
+    cursor.execute('SELECT COUNT(DISTINCT company_hash) FROM users WHERE is_confirmed = 1')
+    total_companies = cursor.fetchone()[0]
+    
+    cursor.execute('SELECT COUNT(*) FROM assessments WHERE status = "in_progress"')
+    assessments_in_progress = cursor.fetchone()[0]
+    
+    cursor.execute('SELECT COUNT(*) FROM assessments WHERE status = "completed"')
+    assessments_completed = cursor.fetchone()[0]
+    
+    # Create benchmark data for template
+    benchmark_data = {}
+    for domain, avg_score, unique_companies in benchmarks:
+        benchmark_data[domain] = {
+            'avg_score': round(avg_score, 1),
+            'unique_companies': unique_companies
+        }
+    
     conn.close()
     
-    return render_template('dashboard.html', assessments=assessments, benchmarks=benchmarks)
+    return render_template('dashboard.html', 
+                         assessments=assessments,
+                         domains=DOMAINS,
+                         benchmark_data=benchmark_data,
+                         total_users=total_users,
+                         total_companies=total_companies,
+                         assessments_in_progress=assessments_in_progress,
+                         assessments_completed=assessments_completed)
 
 @assessment_bp.route('/start_assessment', methods=['POST'])
 def start_assessment():
     """Start a new assessment"""
+    print("=== START ASSESSMENT ROUTE CALLED ===")
+    print("Session user_id:", session.get('user_id'))
+    print("Request form data:", request.form)
+    
     if 'user_id' not in session:
+        print("ERROR: Not authenticated")
         return jsonify({'error': 'Not authenticated'}), 401
     
-    data = request.get_json()
-    domain = data.get('domain')
+    domain = request.form.get('domain')
+    print("Domain received:", domain)
     
-    if not domain:
+    if domain is None:
+        print("ERROR: Domain is required")
         return jsonify({'error': 'Domain is required'}), 400
     
     conn = get_db_connection()
@@ -63,10 +102,12 @@ def start_assessment():
     ''', (session['user_id'], 'complete', domain, datetime.now(), datetime.now()))
     
     assessment_id = cursor.lastrowid
+    print("Created assessment with ID:", assessment_id)
     conn.commit()
     conn.close()
     
-    return jsonify({'assessment_id': assessment_id, 'redirect': url_for('assessment.assessment')})
+    print("Returning success response")
+    return jsonify({'status': 'success', 'assessment_id': assessment_id, 'redirect': url_for('assessment.assessment')})
 
 @assessment_bp.route('/assessment')
 def assessment():
@@ -123,30 +164,30 @@ def get_assessment_progress():
                 if lens_questions:
                     total_questions += 1
                     question_key = f"{capability['id']}_{lens['id']}"
-                    
                     if question_key in responses:
-                        # Question already answered
                         questions.append({
                             'capability_id': capability['id'],
                             'lens_id': lens['id'],
                             'capability_name': capability['name'],
                             'lens_name': lens['name'],
-                            'question': lens_questions[0],  # Use first question for now
+                            'question': lens_questions[0],
                             'answer': responses[question_key]['answer'],
                             'score': responses[question_key]['score'],
-                            'answered': True
+                            'answered': True,
+                            'answer_options': ANSWER_OPTIONS["percentage_questions"],
+                            'domain': capability['domain'] if domain == 'Complete Assessment' else domain
                         })
                     else:
-                        # Question not answered yet
                         questions.append({
                             'capability_id': capability['id'],
                             'lens_id': lens['id'],
                             'capability_name': capability['name'],
                             'lens_name': lens['name'],
-                            'question': lens_questions[0],  # Use first question for now
-                            'answered': False
+                            'question': lens_questions[0],
+                            'answered': False,
+                            'answer_options': ANSWER_OPTIONS["percentage_questions"],
+                            'domain': capability['domain'] if domain == 'Complete Assessment' else domain
                         })
-    
     return jsonify({
         'assessment_id': assessment_id,
         'domain': domain,
@@ -162,11 +203,10 @@ def submit_assessment():
     if 'user_id' not in session:
         return jsonify({'error': 'Not authenticated'}), 401
     
-    data = request.get_json()
-    assessment_id = data.get('assessment_id')
-    capability_id = data.get('capability_id')
-    lens_id = data.get('lens_id')
-    answer = data.get('answer')
+    assessment_id = request.form.get('assessment_id')
+    capability_id = request.form.get('capability_id')
+    lens_id = request.form.get('lens_id')
+    answer = request.form.get('answer')
     
     if not all([assessment_id, capability_id, lens_id, answer]):
         return jsonify({'error': 'Missing required fields'}), 400
@@ -197,6 +237,8 @@ def submit_assessment():
         evaluation = evaluate_finops_maturity(capability['name'], lens['name'], answer, '', 'complete')
         score = evaluation['score']
         improvement_suggestions = evaluation['improvement_suggestions']
+        if isinstance(improvement_suggestions, list):
+            improvement_suggestions = "\n".join(improvement_suggestions)
     except Exception as e:
         score = 0
         improvement_suggestions = "Unable to evaluate at this time."
@@ -211,19 +253,14 @@ def submit_assessment():
     conn.commit()
     conn.close()
     
-    return jsonify({'success': True, 'score': score})
+    return jsonify({'status': 'success', 'score': score})
 
 @assessment_bp.route('/complete_assessment', methods=['POST'])
 def complete_assessment():
     """Complete assessment and generate recommendations"""
-    if 'user_id' not in session:
-        return jsonify({'error': 'Not authenticated'}), 401
-    
-    data = request.get_json()
-    assessment_id = data.get('assessment_id')
-    
+    assessment_id = request.form.get('assessment_id')
     if not assessment_id:
-        return jsonify({'error': 'Assessment ID required'}), 400
+        return jsonify({'status': 'error', 'message': 'Missing assessment_id'}), 400
     
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -234,7 +271,7 @@ def complete_assessment():
     
     if not assessment:
         conn.close()
-        return jsonify({'error': 'Assessment not found'}), 404
+        return jsonify({'status': 'error', 'message': 'Assessment not found'}), 404
     
     domain = assessment[0]
     
@@ -248,7 +285,7 @@ def complete_assessment():
     
     if not responses:
         conn.close()
-        return jsonify({'error': 'No responses found for assessment'}), 400
+        return jsonify({'status': 'error', 'message': 'No responses found for assessment'}), 400
     
     # Calculate overall percentage
     total_score = sum(response[2] for response in responses)
@@ -272,7 +309,7 @@ def complete_assessment():
     conn.close()
     
     return jsonify({
-        'success': True, 
+        'status': 'success',
         'overall_percentage': overall_percentage,
         'redirect': url_for('assessment.get_assessment_results', assessment_id=assessment_id)
     })
@@ -283,6 +320,7 @@ def get_assessment_results(assessment_id):
     if 'user_id' not in session:
         return redirect(url_for('auth.index'))
     
+    raw_average = 0
     conn = get_db_connection()
     cursor = conn.cursor()
     
@@ -300,14 +338,166 @@ def get_assessment_results(assessment_id):
     
     scope_id, domain, status, overall_percentage, recommendations, created_at, updated_at = assessment
     
-    # Get responses
+    # Get responses (only the latest response per capability_id + lens_id combination)
     cursor.execute('''
         SELECT capability_id, lens_id, answer, score, improvement_suggestions
-        FROM responses 
-        WHERE assessment_id = ?
+        FROM responses r1
+        WHERE assessment_id = ? 
+        AND id = (
+            SELECT MAX(id) 
+            FROM responses r2 
+            WHERE r2.assessment_id = r1.assessment_id 
+            AND r2.capability_id = r1.capability_id 
+            AND r2.lens_id = r1.lens_id
+        )
         ORDER BY capability_id, lens_id
     ''', (assessment_id,))
     responses = cursor.fetchall()
+    
+    # Calculate domain-specific benchmarks
+    if domain == 'Complete Assessment':
+        # For complete assessments, calculate benchmarks by domain using actual response scores
+        domain_benchmarks = {}
+        all_domains = ["Understand Usage & Cost", "Quantify Business Value", "Optimize Usage & Cost", "Manage the FinOps Practice"]
+        
+        for domain_name in all_domains:
+            # Get all responses for this domain from domain-specific assessments
+            cursor.execute('''
+                SELECT r.score, u.company_hash, r.capability_id
+                FROM assessments a
+                JOIN users u ON a.user_id = u.id
+                JOIN responses r ON a.id = r.assessment_id
+                WHERE a.domain = ? AND a.status = 'completed'
+            ''', (domain_name,))
+            all_responses = cursor.fetchall()
+            
+            # Filter responses for this specific domain using Python data
+            domain_responses = []
+            for score, company_hash, capability_id in all_responses:
+                capability = next((cap for cap in CAPABILITIES if cap['id'] == capability_id), None)
+                if capability and capability['domain'] == domain_name:
+                    domain_responses.append((score, company_hash))
+            
+            # Calculate average score for this domain
+            if domain_responses:
+                total_score = sum(response[0] for response in domain_responses)
+                total_responses = len(domain_responses)
+                avg_score = total_score / total_responses
+                unique_companies = len(set(response[1] for response in domain_responses))
+            else:
+                avg_score = 0
+                unique_companies = 0
+            
+            domain_benchmarks[domain_name] = {
+                'avg_score': avg_score,
+                'unique_companies': unique_companies,
+                'has_data': unique_companies >= 1
+            }
+        
+        # Calculate overall benchmark for complete assessment (any domains with data)
+        valid_domains = [d for d in domain_benchmarks.values() if d['has_data']]
+        if valid_domains:
+            overall_avg = sum(d['avg_score'] for d in valid_domains) / len(valid_domains)
+            total_companies = sum(d['unique_companies'] for d in valid_domains)
+            has_benchmark_data = True
+        else:
+            overall_avg = 0
+            total_companies = 0
+            has_benchmark_data = False
+        
+        benchmark = (overall_avg, total_companies)
+        industry_avg = overall_avg
+    else:
+        # For domain-specific assessments, get data from both domain-specific assessments AND complete assessments
+        # First, get domain-specific assessment data using actual response scores
+        cursor.execute('''
+            SELECT r.score, u.company_hash
+            FROM assessments a
+            JOIN users u ON a.user_id = u.id
+            JOIN responses r ON a.id = r.assessment_id
+            WHERE a.domain = ? AND a.status = 'completed'
+        ''', (domain,))
+        domain_specific_responses = cursor.fetchall()
+        
+        # Calculate average score for domain-specific assessments
+        domain_specific_avg = 0
+        domain_specific_companies = 0
+        if domain_specific_responses:
+            total_score = sum(response[0] for response in domain_specific_responses)
+            total_responses = len(domain_specific_responses)
+            domain_specific_avg = total_score / total_responses
+            domain_specific_companies = len(set(response[1] for response in domain_specific_responses))
+        
+        domain_specific_benchmark = (domain_specific_avg, domain_specific_companies)
+        
+        # Then, get domain data from complete assessments by analyzing responses
+        # We need to calculate domain-specific scores from complete assessments
+        cursor.execute('''
+            SELECT 
+                a.id,
+                a.overall_percentage,
+                u.company_hash,
+                r.capability_id,
+                r.score
+            FROM assessments a
+            JOIN users u ON a.user_id = u.id
+            JOIN responses r ON a.id = r.assessment_id
+            WHERE a.domain = 'Complete Assessment' 
+            AND a.status = 'completed'
+        ''')
+        complete_assessment_responses = cursor.fetchall()
+        
+        # Calculate domain-specific scores from complete assessments
+        complete_assessment_domain_scores = {}
+        for assessment_id, overall_percentage, company_hash, capability_id, score in complete_assessment_responses:
+            # Find the capability's domain from the Python data
+            capability = next((cap for cap in CAPABILITIES if cap['id'] == capability_id), None)
+            if capability and capability['domain'] == domain:
+                if company_hash not in complete_assessment_domain_scores:
+                    complete_assessment_domain_scores[company_hash] = {'total_score': 0, 'count': 0}
+                complete_assessment_domain_scores[company_hash]['total_score'] += score
+                complete_assessment_domain_scores[company_hash]['count'] += 1
+        
+        # Calculate average domain score from complete assessments
+        complete_assessment_avg = 0
+        complete_assessment_companies = 0
+        if complete_assessment_domain_scores:
+            domain_scores = []
+            for company_hash, data in complete_assessment_domain_scores.items():
+                if data['count'] > 0:
+                    avg_score = data['total_score'] / data['count']
+                    domain_scores.append(avg_score)
+                    complete_assessment_companies += 1
+            
+            if domain_scores:
+                complete_assessment_avg = sum(domain_scores) / len(domain_scores)
+        
+        complete_assessment_benchmark = (complete_assessment_avg, complete_assessment_companies)
+        
+        # Combine the data
+        total_companies = 0
+        total_score = 0
+        company_count = 0
+        
+        if domain_specific_benchmark and domain_specific_benchmark[1] > 0:
+            total_score += domain_specific_benchmark[0] * domain_specific_benchmark[1]
+            total_companies += domain_specific_benchmark[1]
+            company_count += 1
+        
+        if complete_assessment_benchmark and complete_assessment_benchmark[1] > 0:
+            total_score += complete_assessment_benchmark[0] * complete_assessment_benchmark[1]
+            total_companies += complete_assessment_benchmark[1]
+            company_count += 1
+        
+        if total_companies > 0:
+            industry_avg = total_score / total_companies
+            has_benchmark_data = True
+        else:
+            industry_avg = 0
+            has_benchmark_data = False
+        
+        benchmark = (industry_avg, total_companies)
+        domain_benchmarks = None
     
     conn.close()
     
@@ -349,24 +539,134 @@ def get_assessment_results(assessment_id):
     
     parsed_recommendations = parse_recommendations(recommendations)
     
-    # Get domain-specific benchmarks
-    cursor = conn.cursor()
-    cursor.execute('''
-        SELECT AVG(overall_percentage) as avg_score, COUNT(*) as count
-        FROM assessments 
-        WHERE domain = ? AND status = 'completed' AND id != ?
-    ''', (domain, assessment_id))
-    benchmark = cursor.fetchone()
-    conn.close()
+    # Calculate total possible questions and points based on actual assessment scope
+    # For complete assessment: 21 capabilities × 5 lenses = 105 questions
+    # For domain-specific: varies by domain
+    if domain == 'Complete Assessment':
+        total_questions = 105  # 21 capabilities × 5 lenses
+        total_possible_points = 105 * 4  # 105 questions × 4 points max each = 420 points
+    else:
+        # Count capabilities for this domain
+        domain_capabilities = [cap for cap in CAPABILITIES if cap['domain'] == domain]
+        total_questions = len(domain_capabilities) * 5  # 5 lenses per capability
+        total_possible_points = total_questions * 4  # questions × 4 points max each
+    
+    # Calculate total score from responses
+    total_score = sum(response[3] for response in responses) if responses else 0
+    
+    # Calculate correct overall percentage
+    correct_overall_percentage = (total_score / total_possible_points) * 100 if total_possible_points > 0 else 0
+    
+    # Calculate domain-specific scores for complete assessments
+    domain_scores = {}
+    if domain == 'Complete Assessment' and responses:
+        total_score = sum(response[3] for response in responses)
+        total_questions = len(responses)
+        user_score = (total_score / total_questions) if total_questions > 0 else 0
+        # Cálculo dos scores por domínio:
+        domain_scores = {}
+        for response in responses:
+            capability_id = response[0]
+            score = response[3]
+            capability = next((cap for cap in CAPABILITIES if cap['id'] == capability_id), None)
+            if capability:
+                cap_domain = capability['domain']
+                if cap_domain not in domain_scores:
+                    domain_scores[cap_domain] = {'total_score': 0, 'count': 0}
+                domain_scores[cap_domain]['total_score'] += score
+                domain_scores[cap_domain]['count'] += 1
+        for domain_name in domain_scores:
+            if domain_scores[domain_name]['count'] > 0:
+                domain_scores[domain_name]['average'] = domain_scores[domain_name]['total_score'] / domain_scores[domain_name]['count']
+            else:
+                domain_scores[domain_name]['average'] = 0
+        # domain_benchmarks já deve estar sendo calculado como antes, usando média 0-4
+    else:
+        # For domain-specific assessments, use average score per question
+        user_score = (total_score / total_questions) if total_questions > 0 else 0
+        # Calculate raw average for domain-specific assessments
+        if responses:
+            all_scores = [response[3] for response in responses]
+            raw_average = sum(all_scores) / len(all_scores)
+        else:
+            raw_average = 0
+    
+    # Create results matrix for JavaScript visualization
+    results_matrix = {}
+    
+    # Organize responses by capability_id and lens_id
+    for response in responses:
+        capability_id = response[0]
+        lens_id = response[1]
+        answer = response[2]
+        score = response[3]
+        improvement_suggestions = response[4]
+        
+        if capability_id not in results_matrix:
+            results_matrix[capability_id] = {}
+        
+        results_matrix[capability_id][lens_id] = {
+            'answer': answer,
+            'score': score,
+            'improvement_suggestions': improvement_suggestions
+        }
+    
+    # Calculate unique questions answered (each response represents one question)
+    unique_questions_answered = len(responses) if responses else 0
+    
+    # Add additional metadata
+    results_matrix['metadata'] = {
+        'domain': domain,
+        'overall_percentage': overall_percentage,
+        'industry_avg': industry_avg,
+        'total_score': total_score,
+        'total_possible_points': total_possible_points,
+        'total_questions': total_questions,
+        'responses_count': unique_questions_answered,
+        'has_benchmark_data': has_benchmark_data,
+        'unique_companies_for_benchmark': benchmark[1] if benchmark else 0
+    }
+    
+    # Get capabilities and lenses for the domain
+    if domain == 'Complete Assessment':
+        # For complete assessments, get all capabilities
+        domain_capabilities = CAPABILITIES
+    else:
+        # For domain-specific assessments, get capabilities for the specific domain
+        domain_capabilities = [cap for cap in CAPABILITIES if cap['domain'] == domain]
+    lenses = LENSES
+
+    print("responses:", responses)
+    print("user_score:", user_score)
+    print("raw_average:", raw_average)
+    print("total_score:", total_score)
+    print("total_questions:", total_questions)
+    print("assessment_id:", assessment_id)
     
     return render_template('results.html', 
                          assessment_id=assessment_id,
                          domain=domain,
-                         overall_percentage=overall_percentage,
-                         recommendations=parsed_recommendations,
+                         status=status,
+                         overall_percentage=correct_overall_percentage,
+                         parsed_recommendations=parsed_recommendations,
                          responses=responses,
                          benchmark=benchmark,
-                         created_at=created_at)
+                         created_at=created_at,
+                         updated_at=updated_at,
+                         total_possible_points=total_possible_points,
+                         total_questions=total_questions,
+                         total_score=total_score,
+                         industry_avg=industry_avg,
+                         user_score=user_score,
+                         has_benchmark_data=has_benchmark_data,
+                         results_matrix=results_matrix,
+                         capabilities=domain_capabilities,
+                         lenses=lenses,
+                         assessment=[assessment_id, domain, status, correct_overall_percentage, created_at, updated_at],
+                         domain_benchmarks=domain_benchmarks,
+                         domain_scores=domain_scores,
+                         unique_questions_answered=unique_questions_answered,
+                         raw_average=raw_average)
 
 @assessment_bp.route('/set_current_assessment/<int:assessment_id>')
 def set_current_assessment(assessment_id):

@@ -96,12 +96,10 @@
         }
 
         .login-form {
-            display: none;
+            display: none !important;
         }
-
         .login-form.active {
-            display: block;
-            animation: fadeIn 0.3s ease;
+            display: block !important;
         }
 
         @keyframes fadeIn {
@@ -272,6 +270,11 @@
             100% { transform: translate(-50%, -50%) rotate(360deg); }
         }
 
+        .login-form:not(.active) .help-text,
+        .login-form:not(.active) .magic-link-section {
+            display: none !important;
+        }
+
         @media (max-width: 600px) {
             .container {
                 padding: 30px 20px;
@@ -319,8 +322,8 @@
         <!-- Right: Login/Register -->
         <div style="flex: 1 1 0; min-width: 320px; max-width: 500px;">
             <div class="tabs">
-                <button class="tab active" onclick="switchTab('login')">Login</button>
-                <button class="tab" onclick="switchTab('register')">Register</button>
+                <button class="tab active" onclick="switchTab(this, 'login')">Login</button>
+                <button class="tab" onclick="switchTab(this, 'register')">Register</button>
             </div>
             <div class="form-container">
                 <div class="alert" id="alert"></div>
@@ -393,27 +396,17 @@
     <script>
         let currentTab = 'login';
 
-        function switchTab(tab) {
-            currentTab = tab;
-            
-            // Update tab buttons
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            event.target.classList.add('active');
-            
-            // Update forms
-            document.querySelectorAll('.login-form').forEach(f => f.classList.remove('active'));
-            document.getElementById(tab + '-form').classList.add('active');
-            
-            // Show/hide magic link section based on tab
-            const magicLinkSection = document.getElementById('magicLinkSection');
-            if (tab === 'login') {
-                magicLinkSection.style.display = 'block';
-            } else {
-                magicLinkSection.style.display = 'none';
-            }
-            
-            // Clear alerts
-            hideAlert();
+        function switchTab(tabButton, tab) {
+        // Remove .active from all tabs and forms
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.login-form').forEach(f => f.classList.remove('active'));
+
+        // Add .active to the clicked tab and the correct form
+        tabButton.classList.add('active');
+        document.getElementById(tab + '-form').classList.add('active');
+
+        // Clear alerts
+        hideAlert();
         }
 
         function showAlert(message, type) {
@@ -506,12 +499,13 @@
 
         // Initialize magic link section visibility
         document.addEventListener('DOMContentLoaded', function() {
-            const magicLinkSection = document.getElementById('magicLinkSection');
-            if (currentTab === 'login') {
-                magicLinkSection.style.display = 'block';
-            } else {
-                magicLinkSection.style.display = 'none';
-            }
+            // This part is no longer needed as the CSS handles visibility
+            // const magicLinkSection = document.getElementById('magicLinkSection');
+            // if (currentTab === 'login') {
+            //     magicLinkSection.style.display = 'block';
+            // } else {
+            //     magicLinkSection.style.display = 'none';
+            // }
         });
     </script>
 </body>

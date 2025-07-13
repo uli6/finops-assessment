@@ -1,0 +1,603 @@
+{% set status = status if status is defined else 'N/A' %}
+{% set updated_at = updated_at if updated_at is defined else '' %}
+{% set unique_questions_answered = unique_questions_answered if unique_questions_answered is defined else 0 %}
+{% set total_questions = total_questions if total_questions is defined else 0 %}
+{% set overall_percentage = overall_percentage if overall_percentage is defined else 0 %}
+{% set total_score = total_score if total_score is defined else 0 %}
+{% set total_possible_points = total_possible_points if total_possible_points is defined else 0 %}
+{% set raw_average = raw_average if raw_average is defined else 0 %}
+{% set industry_avg = industry_avg if industry_avg is defined else 0 %}
+{% set user_score = user_score if user_score is defined else 0 %}
+{% set domain_benchmarks = domain_benchmarks if domain_benchmarks is defined else {} %}
+{% set domain_scores = domain_scores if domain_scores is defined else {} %}
+{% set has_benchmark_data = has_benchmark_data if has_benchmark_data is defined else False %}
+{% set parsed_recommendations = parsed_recommendations if parsed_recommendations is defined else [] %}
+{% set capabilities = capabilities if capabilities is defined else [] %}
+{% set lenses = lenses if lenses is defined else [] %}
+{% set results_matrix = results_matrix if results_matrix is defined else {} %}
+{% set domain = domain if domain is defined else '' %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinOps Assessment Report</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 1in;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #333;
+            line-height: 1.6;
+            font-size: 12px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+
+        .assessment-info {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .info-card {
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .info-card h3 {
+            color: #667eea;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .info-card p {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .score-overview {
+            background: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border: 1px solid #e1e5e9;
+        }
+
+        .score-overview h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .score-grid {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+        }
+
+        .score-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            flex: 1;
+        }
+
+        .score-card h3 {
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+
+        .score-card p {
+            font-size: 11px;
+            opacity: 0.9;
+        }
+
+        .benchmark-section {
+            background: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border: 1px solid #e1e5e9;
+        }
+
+        .benchmark-section h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .benchmark-content {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .benchmark-bar {
+            margin-bottom: 15px;
+        }
+
+        .benchmark-bar strong {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 12px;
+        }
+
+        .benchmark-bar .bar-container {
+            background: #e0e0e0;
+            border-radius: 4px;
+            height: 15px;
+            margin-top: 3px;
+        }
+
+        .benchmark-bar .bar-fill {
+            height: 15px;
+            border-radius: 4px;
+        }
+
+        .bar-fill.industry {
+            background: #6c63ff;
+        }
+
+        .bar-fill.user {
+            background: #00c896;
+        }
+
+        .results-matrix {
+            background: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border: 1px solid #e1e5e9;
+        }
+
+        .results-matrix h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .matrix-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10px;
+        }
+
+        .matrix-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 8px 6px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 10px;
+        }
+
+        .matrix-table td {
+            padding: 6px;
+            text-align: center;
+            border-bottom: 1px solid #e1e5e9;
+            font-size: 10px;
+        }
+
+        .capability-cell {
+            text-align: left;
+            font-weight: 600;
+            background-color: #f8f9fa;
+            min-width: 150px;
+        }
+
+        .domain-header {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            font-weight: bold;
+            text-align: center;
+            font-size: 11px;
+        }
+
+        .score-cell {
+            font-weight: bold;
+            font-size: 10px;
+        }
+
+        .score-0 { background-color: #f8d7da; color: #721c24; }
+        .score-1 { background-color: #fff3cd; color: #856404; }
+        .score-2 { background-color: #d1ecf1; color: #0c5460; }
+        .score-3 { background-color: #d4edda; color: #155724; }
+        .score-4 { background-color: #d1e7dd; color: #0f5132; }
+
+        .recommendations-section {
+            background: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border: 1px solid #e1e5e9;
+        }
+
+        .recommendations-section h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .recommendations-content {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            font-size: 11px;
+            line-height: 1.5;
+        }
+
+        .recommendation-card {
+            background: #fff;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+
+        .recommendation-card h3 {
+            color: #667eea;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .recommendation-card p {
+            margin-bottom: 5px;
+            font-size: 11px;
+        }
+
+        .recommendation-card strong {
+            color: #333;
+            font-weight: 600;
+        }
+
+        .page-break {
+            page-break-before: always;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid #e1e5e9;
+            font-size: 10px;
+            color: #666;
+        }
+
+        .no-benchmark {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-style: italic;
+        }
+
+        .domain-benchmarks {
+            margin-top: 20px;
+        }
+
+        .domain-benchmark-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .domain-benchmark-card h4 {
+            color: #667eea;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+
+        .domain-benchmark-card .bar-container {
+            background: #e0e0e0;
+            border-radius: 4px;
+            height: 12px;
+            margin: 5px 0;
+        }
+
+        .domain-benchmark-card .bar-fill {
+            height: 12px;
+            border-radius: 4px;
+        }
+
+        .comparison-text {
+            font-size: 10px;
+            margin-top: 5px;
+        }
+
+        .comparison-text.above {
+            color: #28a745;
+        }
+
+        .comparison-text.below {
+            color: #ff9800;
+        }
+
+        .comparison-text.equal {
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 FinOps Assessment Results</h1>
+        
+        <div class="assessment-info">
+            {% if domain and domain != "Complete Assessment" %}
+            <div class="info-card">
+                <h3>Domain</h3>
+                <p><strong>{{ domain }}</strong></p>
+                <p>
+                    {% if domain == "Understand Usage & Cost" %}
+                        20 questions
+                    {% elif domain == "Quantify Business Value" %}
+                        20 questions
+                    {% elif domain == "Optimize Usage & Cost" %}
+                        25 questions
+                    {% elif domain == "Manage the FinOps Practice" %}
+                        40 questions
+                    {% else %}
+                        Domain-specific assessment
+                    {% endif %}
+                </p>
+            </div>
+            {% else %}
+            <div class="info-card">
+                <h3>Type</h3>
+                <p><strong>{{ domain or "Complete Assessment" }}</strong></p>
+                <p>All FinOps domains</p>
+            </div>
+            {% endif %}
+            
+            <div class="info-card">
+                <h3>Status</h3>
+                <p><strong>{{ status.title() if status else 'Completed' }}</strong></p>
+                <p>Completed on {{ updated_at[:10] if updated_at else 'N/A' }}</p>
+            </div>
+            
+            <div class="info-card">
+                <h3>Questions</h3>
+                <p><strong>{{ unique_questions_answered }} of {{ total_questions }}</strong></p>
+                <p>Successfully answered</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="score-overview">
+        <h2>📈 Overall Score</h2>
+        
+        <div class="score-grid">
+            <div class="score-card">
+                <h3>{{ overall_percentage | round(1) }}%</h3>
+                <p>Overall Maturity</p>
+            </div>
+            
+            <div class="score-card">
+                <h3>{{ total_score }}</h3>
+                <p>Points Earned</p>
+            </div>
+            
+            <div class="score-card">
+                <h3>{{ total_possible_points }}</h3>
+                <p>Total Possible</p>
+            </div>
+            
+            <div class="score-card">
+                <h3>{{ raw_average | round(1) if raw_average and raw_average > 0 else 0 }}</h3>
+                <p>Average (0-4)</p>
+            </div>
+        </div>
+    </div>
+
+    {% if has_benchmark_data %}
+    <div class="benchmark-section">
+        <h2>🏆 Industry Benchmark</h2>
+        <p style="margin-bottom: 15px; color: #666; font-size: 11px;">
+            Compare your performance with industry averages. Data is anonymized to ensure privacy.
+        </p>
+        
+        {% if domain == "Complete Assessment" and domain_benchmarks %}
+        <!-- Domain-specific benchmarks for complete assessment -->
+        <div class="domain-benchmarks">
+            <h3 style="color: #333; margin-bottom: 10px; font-size: 14px;">📊 Overall Performance</h3>
+            <div class="benchmark-content">
+                <div class="benchmark-bar">
+                    <strong>Industry Average:</strong> {{ industry_avg | round(1) }}%
+                    <div class="bar-container">
+                        <div class="bar-fill industry" style="width: {{ industry_avg }}%;"></div>
+                    </div>
+                </div>
+                <div class="benchmark-bar">
+                    <strong>Your Organization:</strong> {{ user_score | round(1) }}%
+                    <div class="bar-container">
+                        <div class="bar-fill user" style="width: {{ user_score }}%;"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <h3 style="color: #333; margin: 20px 0 10px 0; font-size: 14px;">📈 Domain Performance</h3>
+            {% for domain_name in ["Understand Usage & Cost", "Quantify Business Value", "Optimize Usage & Cost", "Manage the FinOps Practice"] %}
+            {% if domain_scores and domain_name in domain_scores %}
+            <div class="domain-benchmark-card">
+                <h4>{{ domain_name }}</h4>
+                
+                <div style="margin-bottom: 10px;">
+                    <div style="margin-bottom: 5px;">
+                        <strong>Your Score:</strong> {{ (domain_scores[domain_name].average / 4 * 100) | round(1) }}%
+                    </div>
+                    <div class="bar-container">
+                        <div class="bar-fill user" style="width: {{ (domain_scores[domain_name].average / 4 * 100) }}%;"></div>
+                    </div>
+                </div>
+                
+                {% if domain_benchmarks and domain_name in domain_benchmarks and domain_benchmarks[domain_name].has_data %}
+                <div style="margin-bottom: 8px;">
+                    <strong>Industry Average:</strong> {{ domain_benchmarks[domain_name].avg_score | round(1) }}%
+                </div>
+                <div class="bar-container">
+                    <div class="bar-fill industry" style="width: {{ domain_benchmarks[domain_name].avg_score }}%;"></div>
+                </div>
+                <div style="font-size: 9px; color: #666; margin-bottom: 5px;">
+                    Based on {{ domain_benchmarks[domain_name].unique_companies }} companies
+                </div>
+                
+                {% set user_domain_score = (domain_scores[domain_name].average / 4 * 100) %}
+                {% if user_domain_score > domain_benchmarks[domain_name].avg_score %}
+                    <div class="comparison-text above">✅ Above industry average</div>
+                {% elif user_domain_score < domain_benchmarks[domain_name].avg_score %}
+                    <div class="comparison-text below">⚠️ Below industry average</div>
+                {% else %}
+                    <div class="comparison-text equal">➡️ At industry average</div>
+                {% endif %}
+                {% else %}
+                <div style="font-size: 9px; color: #666; margin-top: 5px;">
+                    <em>No industry benchmark data available for this domain</em>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+        {% else %}
+        <!-- Standard benchmark for domain-specific assessments -->
+        <div class="benchmark-content">
+            <div class="benchmark-bar">
+                <strong>Industry Average:</strong> {{ industry_avg | round(1) }}%
+                <div class="bar-container">
+                    <div class="bar-fill industry" style="width: {{ industry_avg }}%;"></div>
+                </div>
+            </div>
+            <div class="benchmark-bar">
+                <strong>Your Organization:</strong> {{ user_score | round(1) }}%
+                <div class="bar-container">
+                    <div class="bar-fill user" style="width: {{ user_score }}%;"></div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if user_score > industry_avg %}
+            <p style="color: #28a745; font-weight: bold; margin-top: 15px; font-size: 12px;">👏 Your organization is above industry average!</p>
+        {% elif user_score < industry_avg %}
+            <p style="color: #ff9800; font-weight: bold; margin-top: 15px; font-size: 12px;">⚡ Your organization is below industry average.</p>
+        {% else %}
+            <p style="color: #667eea; font-weight: bold; margin-top: 15px; font-size: 12px;">You are at industry average.</p>
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="benchmark-section">
+        <h2>🏆 Industry Benchmark</h2>
+        <div class="no-benchmark">
+            <h3>Not enough data for benchmarking</h3>
+            <p>We need at least 2 completed assessments from different organizations for the same domain to provide meaningful comparisons.</p>
+            <p>Your assessment will contribute to future benchmarking data!</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="results-matrix">
+        <h2>📋 Results Matrix</h2>
+        <p style="margin-bottom: 15px; color: #666; font-size: 11px;">
+            Detailed breakdown of your scores across all capabilities and lenses.
+        </p>
+        
+        <table class="matrix-table">
+            <thead>
+                <tr>
+                    <th>Capability</th>
+                    <th>Knowledge<br><small>(30%)</small></th>
+                    <th>Process<br><small>(25%)</small></th>
+                    <th>Metrics<br><small>(20%)</small></th>
+                    <th>Adoption<br><small>(20%)</small></th>
+                    <th>Automation<br><small>(5%)</small></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if domain == 'Complete Assessment' %}
+                    {% for domain_name, domain_capabilities in capabilities | groupby('domain') %}
+                    <tr>
+                        <td colspan="6" class="domain-header">{{ domain_name }}</td>
+                    </tr>
+                    {% for capability in domain_capabilities %}
+                    <tr>
+                        <td class="capability-cell">{{ capability.name }}</td>
+                        {% for lens in lenses %}
+                        <td class="score-cell score-{{ results_matrix.get(capability.id, {}).get(lens.id, {}).get('score', 'none') }}">
+                            {{ results_matrix.get(capability.id, {}).get(lens.id, {}).get('score', '-') }}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                    {% endfor %}
+                {% else %}
+                    {% for capability in capabilities %}
+                    <tr>
+                        <td class="capability-cell">{{ capability.name }}</td>
+                        {% for lens in lenses %}
+                        <td class="score-cell score-{{ results_matrix.get(capability.id, {}).get(lens.id, {}).get('score', 'none') }}">
+                            {{ results_matrix.get(capability.id, {}).get(lens.id, {}).get('score', '-') }}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if parsed_recommendations %}
+    <div class="recommendations-section">
+        <h2>🎯 AI-Powered Recommendations</h2>
+        <div class="recommendations-content">
+            {% for rec in parsed_recommendations %}
+            <div class="recommendation-card">
+                <h3>{{ rec.title }}</h3>
+                <p><strong>Description:</strong> {{ rec.description }}</p>
+                <p><strong>Why it matters:</strong> {{ rec.why_matters }}</p>
+                <p><strong>Recommendation:</strong></p>
+                <div style="margin-left: 10px; margin-top: 5px;">
+                    {{ rec.recommendation | markdown | safe }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="footer">
+        <p>Generated on {{ updated_at if updated_at else 'N/A' }} | FinOps Assessment Platform</p>
+        <p>This report contains confidential assessment data. Please handle with appropriate care.</p>
+    </div>
+</body>
+</html> 

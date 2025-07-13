@@ -463,6 +463,7 @@
         let questions = [];
         let responses = {};
         let assessmentId = null;
+        let isResuming = false;
 
         // Show pre-assessment info first, unless resuming
         window.onload = function() {
@@ -471,6 +472,7 @@
                 const isResume = urlParams.get('resume') === '1';
                 if (isResume) {
                     // Skip pre-assessment, load questions immediately
+                    isResuming = true;
                     document.getElementById('pre-assessment-card').style.display = 'none';
                     document.getElementById('loading').style.display = 'block';
                     document.getElementById('question-card').style.display = 'none';
@@ -500,10 +502,31 @@
                 const data = await response.json();
                 console.log('Assessment data response:', data);
                 
-                if (data.status === 'success') {
+                if ((data.status === 'success' || data.status === 'in_progress') && data.questions && Array.isArray(data.questions)) {
                     assessmentId = data.assessment_id;
                     questions = data.questions;
-                    responses = data.responses || {};
+                    
+                    console.log('DEBUG: Loaded assessment data:', {
+                        assessmentId: assessmentId,
+                        totalQuestions: questions.length,
+                        status: data.status,
+                        answeredQuestions: data.answered_questions
+                    });
+                    
+                    // Build responses object from questions data
+                    responses = {};
+                    questions.forEach(question => {
+                        const key = `${question.capability_id}_${question.lens_id}`;
+                        if (question.answered) {
+                            responses[key] = {
+                                answer_level: question.answer,
+                                answer_details: question.answer_details || ''
+                            };
+                        }
+                    });
+                    
+                    console.log('DEBUG: Built responses object:', responses);
+                    console.log('DEBUG: Number of answered questions:', Object.keys(responses).length);
                     
                     if (questions.length === 0) {
                         alert('No questions available. Please start a new assessment.');
@@ -511,15 +534,26 @@
                         return;
                     }
                     
-                    // Find current question index
-                    currentQuestionIndex = 0;
+                    // Find current question index - preserve current position if resuming
+                    // Always find the first unanswered question when loading assessment
+                    let foundUnanswered = false;
                     for (let i = 0; i < questions.length; i++) {
                         const key = `${questions[i].capability_id}_${questions[i].lens_id}`;
                         if (!responses[key]) {
                             currentQuestionIndex = i;
+                            console.log('DEBUG: Found first unanswered question at index:', i);
+                            foundUnanswered = true;
                             break;
                         }
                     }
+                    
+                    // If all questions are answered, set to last question
+                    if (!foundUnanswered) {
+                        currentQuestionIndex = questions.length - 1;
+                        console.log('DEBUG: All questions answered, setting to last question:', currentQuestionIndex);
+                    }
+                    
+                    console.log('DEBUG: Final currentQuestionIndex:', currentQuestionIndex);
                     
                     // Check if assessment is complete
                     if (currentQuestionIndex >= questions.length) {
@@ -563,13 +597,26 @@
         }
 
         function showQuestion() {
+            console.log('DEBUG: showQuestion called with currentQuestionIndex:', currentQuestionIndex);
+            console.log('DEBUG: Total questions available:', questions.length);
+            console.log('DEBUG: Current responses count:', Object.keys(responses).length);
+            
             if (currentQuestionIndex >= questions.length) {
+                console.log('DEBUG: currentQuestionIndex >= questions.length, showing completion');
                 showCompletion();
                 return;
             }
             
             const question = questions[currentQuestionIndex];
             const key = `${question.capability_id}_${question.lens_id}`;
+            
+            console.log('DEBUG: Showing question:', {
+                index: currentQuestionIndex,
+                capability: question.capability_name,
+                lens: question.lens_name,
+                key: key,
+                hasResponse: !!responses[key]
+            });
             
             // Update meta information
             const metaHtml = `
@@ -647,6 +694,8 @@
             const answerLevel = document.getElementById('answer-level').value;
             const answerDetails = document.getElementById('answer-details').value.trim();
             
+            console.log('DEBUG: saveCurrentResponse called with answerLevel:', answerLevel);
+            
             if (!answerLevel) {
                 alert('Please select a maturity level before continuing.');
                 return false;
@@ -654,9 +703,10 @@
             
             const question = questions[currentQuestionIndex];
             const formData = new FormData();
+            formData.append('assessment_id', assessmentId);
             formData.append('capability_id', question.capability_id);
             formData.append('lens_id', question.lens_id);
-            formData.append('answer_level', answerLevel);
+            formData.append('answer', answerLevel);
             formData.append('answer_details', answerDetails);
             
             try {
@@ -666,6 +716,7 @@
                 });
                 
                 const result = await response.json();
+                console.log('DEBUG: saveCurrentResponse result:', result);
                 
                 if (result.status === 'success') {
                     // Update local responses
@@ -674,6 +725,12 @@
                         answer_level: answerLevel,
                         answer_details: answerDetails
                     };
+                    
+                    console.log('DEBUG: Updated local responses, key:', key);
+                    console.log('DEBUG: Total responses now:', Object.keys(responses).length);
+                    
+                    // Update progress immediately
+                    updateProgress();
                     
                     return true;
                 } else {
@@ -688,15 +745,25 @@
         }
 
         async function nextQuestion() {
+            console.log('DEBUG: nextQuestion called, currentQuestionIndex before save:', currentQuestionIndex);
+            console.log('DEBUG: Total questions:', questions.length);
+            console.log('DEBUG: Current responses count:', Object.keys(responses).length);
+            
             if (await saveCurrentResponse()) {
                 currentQuestionIndex++;
+                console.log('DEBUG: currentQuestionIndex after increment:', currentQuestionIndex);
                 
                 if (currentQuestionIndex >= questions.length) {
+                    console.log('DEBUG: Assessment complete, showing completion');
                     showCompletion();
                 } else {
+                    console.log('DEBUG: Moving to next question');
                     showQuestion();
                 }
+            } else {
+                console.log('DEBUG: Save failed, staying on current question');
             }
+            // If saveCurrentResponse returns false, stay on current question
         }
 
         function previousQuestion() {
@@ -742,8 +809,12 @@
                     </style>
                 `;
                 
+                const formData = new FormData();
+                formData.append('assessment_id', assessmentId);
+                
                 const response = await fetch('/complete_assessment', {
-                    method: 'POST'
+                    method: 'POST',
+                    body: formData
                 });
                 
                 const result = await response.json();

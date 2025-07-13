@@ -357,7 +357,19 @@
                         {% for domain in domains %}
                         <div class="domain-card" data-domain="{{ domain }}">
                             <h4>{{ domain }}</h4>
-                            <p>Domain-specific assessment</p>
+                            <p>
+                                {% if domain == "Understand Usage & Cost" %}
+                                    20 questions
+                                {% elif domain == "Quantify Business Value" %}
+                                    20 questions
+                                {% elif domain == "Optimize Usage & Cost" %}
+                                    25 questions
+                                {% elif domain == "Manage the FinOps Practice" %}
+                                    40 questions
+                                {% else %}
+                                    Domain-specific assessment
+                                {% endif %}
+                            </p>
                         </div>
                         {% endfor %}
                     </div>

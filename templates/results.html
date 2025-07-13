@@ -555,7 +555,19 @@
                 <div class="info-card">
                     <h3>Domain</h3>
                     <p><strong>{{ domain }}</strong></p>
-                    <p>Domain-specific assessment</p>
+                                            <p>
+                            {% if domain == "Understand Usage & Cost" %}
+                                20 questions
+                            {% elif domain == "Quantify Business Value" %}
+                                20 questions
+                            {% elif domain == "Optimize Usage & Cost" %}
+                                25 questions
+                            {% elif domain == "Manage the FinOps Practice" %}
+                                40 questions
+                            {% else %}
+                                Domain-specific assessment
+                            {% endif %}
+                        </p>
                 </div>
                 {% else %}
                 <div class="info-card">

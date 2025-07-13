@@ -15,7 +15,7 @@ The FinOps Assessment Platform is a cutting-edge, **privacy-first** solution tha
 
 **🎯 Personalized AI Recommendations**: Every assessment generates intelligent, contextual recommendations that go beyond generic advice. Our AI analyzes your responses, identifies specific improvement opportunities, and provides actionable guidance tailored to your organization's current maturity level and industry context.
 
-**📈 Evidence-Based Scoring**: Traditional assessments rely on simple multiple-choice responses. Our platform captures detailed, narrative responses that the AI analyzes to provide evidence-based maturity scores. This approach ensures more accurate and meaningful assessments that reflect the true complexity of FinOps practices.
+**📈 Intelligent Response Analysis**: Our platform captures detailed, narrative responses that the AI analyzes to provide nuanced maturity scores. This approach ensures more accurate and meaningful assessments that reflect the true complexity of FinOps practices.
 
 **🔄 Continuous Learning**: The AI system continuously improves its recommendations based on industry trends, best practices, and organizational patterns, ensuring your assessments remain relevant and valuable over time.
 
@@ -49,7 +49,7 @@ This platform represents the future of FinOps assessment—combining cutting-edg
 - **Advanced Text Analysis**: ChatGPT analyzes detailed narrative responses for nuanced maturity evaluation
 - **Context-Aware Recommendations**: AI generates personalized improvement suggestions based on your specific organizational context
 - **Intelligent Pattern Recognition**: Identifies trends and patterns across responses to provide deeper insights
-- **Evidence-Based Scoring**: AI evaluates the quality and depth of responses, not just multiple-choice answers
+- **Intelligent Response Analysis**: AI evaluates the quality and depth of narrative responses for nuanced scoring
 - **Continuous Learning**: Recommendations improve over time based on industry best practices and organizational patterns
 - **Multi-Dimensional Analysis**: AI considers multiple factors simultaneously for comprehensive maturity assessment
 
@@ -65,7 +65,7 @@ This platform represents the future of FinOps assessment—combining cutting-edg
 - **20+ FinOps Capabilities**: Comprehensive evaluation across all major FinOps practices
 - **Multi-Lens Evaluation**: Knowledge (30%), Process (25%), Metrics (20%), Adoption (20%), Automation (5%)
 - **AI-Enhanced Analysis**: ChatGPT provides intelligent scoring and contextual recommendations
-- **Evidence-Based Assessment**: AI analyzes detailed responses for accurate maturity evaluation
+- **Intelligent Assessment**: AI analyzes detailed narrative responses for accurate maturity evaluation
 - **Professional Reporting**: AI-generated insights in comprehensive PDF reports with anonymized data
 - **Data Export Options**: Excel XLSX export with AI-enhanced analysis and color-coded scoring
 

@@ -452,6 +452,59 @@
             line-height: 1.7;
         }
 
+        /* Processing Overlay Styles */
+        .processing-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+            backdrop-filter: blur(5px);
+        }
+
+        .processing-card {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .processing-spinner {
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid #667eea;
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        .processing-text {
+            font-size: 2rem;
+            color: #667eea;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .processing-subtext {
+            font-size: 1rem;
+            color: #555;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 10px;
@@ -485,16 +538,19 @@
 </head>
 <body>
     <div class="container">
+        <!-- Processing Overlay -->
+        <div class="processing-overlay" id="processing-overlay" style="display: none;">
+            <div class="processing-card">
+                <div class="processing-spinner"></div>
+                <div class="processing-text">Processing Your Assessment</div>
+                <div class="processing-subtext">Analyzing your answers with AI to create your personalized report...</div>
+            </div>
+        </div>
+
         <div class="header">
             <h1>📊 FinOps Assessment Results</h1>
             
             <div class="assessment-info">
-                <div class="info-card">
-                    <h3>Scope</h3>
-                    <p><strong>{{ scope.name }}</strong></p>
-                    <p>{{ scope.description }}</p>
-                </div>
-                
                 {% if domain %}
                 <div class="info-card">
                     <h3>Domain</h3>
@@ -517,7 +573,7 @@
                 
                 <div class="info-card">
                     <h3>Questions</h3>
-                    <p><strong>{{ total_score // 4 if total_possible > 0 else 0 }} of {{ total_possible // 4 if total_possible > 0 else 0 }}</strong></p>
+                    <p><strong>{{ (total_possible // 4) if total_possible > 0 else 0 }} of {{ (total_possible // 4) if total_possible > 0 else 0 }}</strong></p>
                     <p>Successfully answered</p>
                 </div>
             </div>
@@ -640,15 +696,25 @@
             </table>
         </div>
 
-        {% if recommendations %}
+        {% if parsed_recommendations %}
         <div class="recommendations-section">
             <h2 style="color: #667eea; margin-bottom: 20px;">🎯 AI-Powered Recommendations</h2>
-            <p style="margin-bottom: 20px; color: #666;">
-                Personalized recommendations based on your assessment results, FinOps Foundation best practices, and real-world use cases.
-            </p>
             <div class="recommendations-content" style="background: #f8f9fa; border-radius: 10px; padding: 2rem 2.5rem; box-shadow: 0 2px 12px rgba(102,126,234,0.08); margin-bottom: 2rem; font-size: 1.1rem; line-height: 1.7;">
                 <div style="max-width: 800px; margin: 0 auto;">
-                    {{ recommendations | markdown | safe }}
+                    {% for rec in parsed_recommendations %}
+                    <div class="recommendation-card" style="background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); padding: 1.5rem 2rem; margin-bottom: 2.5rem; border-left: 6px solid #667eea;">
+                        <div style="font-size: 1.2rem; font-weight: bold; margin-bottom: 0.5rem;">
+                            {{ rec.title }}
+                        </div>
+                        <div><b>Description:</b> {{ rec.description }}</div>
+                        <div style="margin-top: 0.5em;"><b>Why it matters:</b> {{ rec.why }}</div>
+                        <div style="margin-top: 0.5em;"><b>Recommendation:</b>
+                            <div style="margin-left:1em;">
+                                {{ rec.recommendation | markdown | safe }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
                 </div>
             </div>
         </div>
@@ -684,6 +750,23 @@
 
     <script>
         const resultsMatrix = {{ results_matrix | tojson }};
+
+        // Show processing overlay if assessment is still being processed
+        window.onload = function() {
+            // Check if recommendations are still being generated
+            const recommendationsSection = document.querySelector('.recommendations-section');
+            if (!recommendationsSection) {
+                // Show processing overlay if recommendations are not ready
+                document.getElementById('processing-overlay').style.display = 'flex';
+                
+                // Hide overlay after a short delay (simulating processing time)
+                setTimeout(() => {
+                    document.getElementById('processing-overlay').style.display = 'none';
+                    // Reload page to show results once processing is complete
+                    window.location.reload();
+                }, 3000);
+            }
+        };
 
         function showDetail(capabilityId, lensId, capabilityName, lensName) {
             const result = resultsMatrix[capabilityId] && resultsMatrix[capabilityId][lensId];

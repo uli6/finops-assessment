@@ -3,6 +3,8 @@
 
 A privacy-focused FinOps Maturity Assessment platform that helps organizations evaluate their FinOps practices across different domains and capabilities.
 
+[![Buy Me a Coffee](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/uli6)
+
 ## 🌟 Features
 
 ### Privacy-First Design
@@ -12,19 +14,19 @@ A privacy-focused FinOps Maturity Assessment platform that helps organizations e
 - **Secure magic link authentication** - No passwords, only secure email-based login
 
 ### Assessment Framework
-- **Multi-scope assessments**: Public Cloud, SaaS, Data Center, Licensing, AI/ML
+- **Multi-domain assessments**: Understanding Usage & Cost, Quantify Business Value, Optimize Usage & Cost, Manage the FinOps Practice
 - **Comprehensive capabilities**: 20+ FinOps capabilities across 4 domains
 - **Multi-lens evaluation**: Knowledge, Process, Metrics, Adoption, Automation
-- **AI-powered analysis**: ChatGPT analyzes both text responses and uploaded evidence files
-- **Evidence-based scoring**: AI considers uploaded files for more accurate assessments
+- **AI-powered analysis**: ChatGPT analyzes text responses for maturity evaluation
+- **Evidence-based scoring**: AI considers detailed responses for accurate assessments
 - **PDF export**: Professional assessment reports with anonymized data
 
 ### User Experience
 - **Email confirmation required** - Users only saved after confirming email
 - **Magic link authentication** - Secure, passwordless login
 - **Real-time progress tracking** - Save and resume assessments
-- **AI-powered file analysis** - Upload evidence files for ChatGPT analysis
-- **Privacy-focused file handling** - Files processed and deleted immediately
+- **AI-powered recommendations** - Personalized improvement suggestions
+- **Dashboard analytics** - Company benchmarks and progress tracking
 - **Responsive design** - Works on desktop and mobile
 
 ## 🚀 Quick Start
@@ -33,6 +35,7 @@ A privacy-focused FinOps Maturity Assessment platform that helps organizations e
 - Python 3.8+
 - pip
 - Email configuration (Gmail recommended)
+- OpenAI API key (for AI recommendations)
 
 ### Installation
 
@@ -66,9 +69,9 @@ A privacy-focused FinOps Maturity Assessment platform that helps organizations e
    - Generate App Password
    - Use the 16-character app password as EMAIL_PASS
 
-5. **Test email configuration**
+5. **Set up OpenAI API key**
    ```bash
-   # Test your email configuration manually by trying to register
+   export OPENAI_API_KEY="your-openai-api-key"
    ```
 
 6. **Run the application**
@@ -110,26 +113,25 @@ The platform requires email configuration for user registration and login. For G
 - **CSRF protection**: Built-in CSRF protection
 
 ### Data Protection
-- **File upload security**: Secure filename handling with immediate deletion
-- **Privacy-focused file processing**: Files analyzed by AI and deleted immediately
 - **XSS protection**: Input sanitization and output encoding
 - **SQL injection protection**: Parameterized queries
 - **Encryption**: Sensitive data encrypted at rest
 
 ## 📊 Assessment Framework
 
-### Scopes
-- **Public Cloud**: AWS, Azure, GCP workloads
-- **SaaS**: Software as a Service applications
-- **Data Center**: On-premises infrastructure
-- **Licensing**: Software licensing management
-- **AI/ML**: Artificial Intelligence workloads
-
 ### Domains
-- **Understanding Usage & Cost**
-- **Quantify Business Value**
-- **Optimize Usage & Cost**
-- **Manage the FinOps Practice**
+- **Understanding Usage & Cost**: Visibility and cost allocation
+- **Quantify Business Value**: Business value measurement and optimization
+- **Optimize Usage & Cost**: Resource optimization and cost management
+- **Manage the FinOps Practice**: Governance and organizational practices
+
+### Capabilities
+Each domain contains multiple FinOps capabilities:
+- **Forecasting**: Cost and usage prediction
+- **Budgeting**: Financial planning and budget management
+- **Benchmark**: Performance comparison and analysis
+- **Unit Economics**: Cost per unit analysis
+- **And more**: 20+ capabilities across all domains
 
 ### Lenses
 - **Knowledge** (30% weight): Understanding and awareness
@@ -145,12 +147,12 @@ The platform requires email configuration for user registration and login. For G
 - **SQLite**: Database
 - **Cryptography**: Data encryption
 - **WeasyPrint**: PDF generation
-- **OpenAI**: AI-powered analysis of text responses and uploaded files
+- **OpenAI**: AI-powered analysis and recommendations
 
 ### Frontend
 - **HTML/CSS/JavaScript**: Responsive design
+- **Chart.js**: Interactive dashboard charts
 - **Markdown**: Rich text formatting
-- **File upload**: Evidence attachment support
 
 ### Security
 - **Flask-WTF**: CSRF protection
@@ -163,6 +165,8 @@ The platform requires email configuration for user registration and login. For G
 finops-assessment/
 ├── app.py                 # Main Flask application
 ├── requirements.txt       # Python dependencies
+├── privacy_notice.md     # Privacy policy
+├── reprocess_recommendations.py # AI recommendation script
 
 ├── templates/            # HTML templates
 │   ├── login.html       # Login/registration page
@@ -170,8 +174,11 @@ finops-assessment/
 │   ├── assessment.html  # Assessment interface
 │   ├── results.html     # Assessment results
 │   ├── settings.html    # Account settings
-│   └── pdf_results.html # PDF export template
-├── uploads/             # File upload directory
+│   ├── pdf_results.html # PDF export template
+│   ├── login_error.html # Login error page
+│   ├── email_confirmed.html # Email confirmation page
+│   └── email_error.html # Email error page
+
 └── finops_assessment.db # SQLite database
 ```
 
@@ -182,7 +189,7 @@ finops-assessment/
 - `EMAIL_PASS`: Email password/app password
 - `SMTP_SERVER`: SMTP server (default: smtp.gmail.com)
 - `SMTP_PORT`: SMTP port (default: 587)
-- `OPENAI_API_KEY`: OpenAI API key for recommendations
+- `OPENAI_API_KEY`: OpenAI API key for AI recommendations
 
 ### Database
 The application automatically creates and migrates the SQLite database on startup. No manual database setup required.
@@ -193,22 +200,27 @@ The application automatically creates and migrates the SQLite database on startu
 1. **Register** with corporate email address
 2. **Confirm email** via confirmation link
 3. **Login** with magic link
-4. **Start assessment** for your chosen scope
+4. **Start assessment** for your chosen domain
 
 ### Assessment Process
-1. **Select scope** (Public Cloud, SaaS, etc.)
+1. **Select domain** (Understanding Usage & Cost, Quantify Business Value, etc.)
 2. **Answer questions** for each capability and lens
-3. **Upload evidence files** (optional) - Files analyzed by ChatGPT and deleted immediately
-4. **Get AI-powered insights** based on text responses and file analysis
+3. **Get AI-powered insights** based on your responses
+4. **View recommendations** for improvement
 5. **Export PDF report** with anonymized data
+
+### Dashboard Features
+- **Company benchmarks**: Compare your scores to industry averages
+- **Domain-specific charts**: Visual progress tracking per domain
+- **Assessment history**: Track all completed assessments
+- **Privacy-focused analytics**: Anonymous benchmarking
 
 ### Privacy Features
 - **Anonymous company names**: Company A, Company B, etc.
 - **Encrypted organization data**: All sensitive data encrypted
 - **No personal tracking**: No names or personal info stored
 - **Domain-based analytics**: Company counting by email domain
-- **Privacy-focused file handling**: Uploaded files processed by AI and deleted immediately
-- **No permanent file storage**: Only AI analysis results stored, not original files
+- **AI-powered insights**: Personalized recommendations without data retention
 
 ## 🚀 Deployment
 
@@ -243,6 +255,7 @@ For issues and questions:
 2. Test email setup by trying to register
 3. Review the logs for error messages
 4. Ensure corporate email domains are used (no public email providers)
+5. Verify OpenAI API key is set for AI recommendations
 
 ## 🔄 Recent Updates
 
@@ -251,6 +264,9 @@ For issues and questions:
 - **Admin functionality removed**: Single-role, privacy-first approach
 - **Enhanced security**: Improved authentication and data protection
 - **Better UX**: Simplified registration and login process
-- **AI-powered file analysis**: ChatGPT analyzes uploaded evidence files for enhanced insights
-- **Privacy-focused file handling**: Files processed by AI and deleted immediately
-- **Evidence-based scoring**: More accurate assessments using both text and file analysis 
+- **AI-powered recommendations**: Personalized improvement suggestions
+- **Dashboard analytics**: Company benchmarks and progress tracking
+- **New assessment framework**: Updated to latest FinOps Foundation standards
+- **Domain-specific assessments**: Focus on specific FinOps domains
+- **Interactive charts**: Visual progress tracking with Chart.js
+- **Enhanced PDF reports**: Professional assessment reports with recommendations 

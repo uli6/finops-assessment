@@ -128,6 +128,48 @@
             border-color: #667eea;
         }
 
+        .answer-row {
+            margin-bottom: 20px;
+        }
+
+        .answer-dropdown {
+            margin-bottom: 20px;
+        }
+
+        .answer-dropdown select {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            font-family: inherit;
+            background: white;
+            cursor: pointer;
+            transition: border-color 0.3s ease;
+        }
+
+        .answer-dropdown select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .answer-text textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            font-family: inherit;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+        }
+
+        .answer-text textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
         .file-upload {
             margin-top: 20px;
         }
@@ -182,6 +224,49 @@
             opacity: 0.6;
             cursor: not-allowed;
             transform: none;
+        }
+
+        .processing-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .processing-card {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            max-width: 400px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+
+        .processing-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        .processing-text {
+            color: #333;
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+
+        .processing-subtext {
+            color: #666;
+            font-size: 0.9rem;
         }
 
         .btn-secondary {
@@ -306,11 +391,11 @@
             <h2 style="color: #667eea; margin-bottom: 20px;">Before You Start the Assessment</h2>
             <ul style="color: #444; font-size: 1.1rem; margin-bottom: 30px; line-height: 1.7;">
                 <li>🔒 <strong>Privacy:</strong> Your data will be <b>anonymized</b> and <b>stored encrypted</b>. No sensitive information will be shared.</li>
-                <li>⏱️ <strong>Average time:</strong> The average time to complete this assessment is <b>15 to 20 minutes</b>.</li>
+                <li>⏱️ <strong>Average time:</strong> The average time to complete this assessment is <b id="assessment-time">15 to 20 minutes</b>.</li>
                 <li>💾 <strong>Continue later:</strong> You can <b>save your progress</b> at any time and continue later.</li>
                 <li>🤖 <strong>Artificial Intelligence:</strong> Your answers will be analyzed by AI to generate personalized recommendations and automatic insights.</li>
-                <li>📎 <strong>Evidence:</strong> Uploading documents, screenshots, or other evidence strengthens your assessment and recommendations.</li>
-                <li>🛡️ <strong>Security:</strong> Only you and authorized administrators will have access to the raw data.</li>
+                <li>📝 <strong>Detailed Responses:</strong> Each question includes a maturity level selection and detailed text field for comprehensive assessment.</li>
+                <li>🛡️ <strong>Security:</strong> Your raw answers are <b>never stored</b>. Only anonymized, encrypted, and AI-processed results are saved. No one (not even administrators) has access to your personal or organizational information.</li>
                 <li>📊 <strong>Benchmark:</strong> Your results will be anonymously compared with the industry, without exposing your organization.</li>
                 <li>❓ <strong>Questions:</strong> If you have any questions, please contact support.</li>
             </ul>
@@ -337,16 +422,20 @@
             </div>
 
             <div class="answer-section">
-                <label for="answer">Your Response:</label>
-                <textarea id="answer" name="answer" placeholder="Please provide a detailed response about your current practices, processes, and capabilities..."></textarea>
-            </div>
-
-            <div class="file-upload">
-                <label for="evidence">Supporting Evidence (Optional):</label>
-                <input type="file" id="evidence" name="evidence" accept=".pdf,.png,.jpg,.jpeg" multiple>
-                <small style="color: #666; display: block; margin-top: 5px;">
-                    Upload documents, screenshots, or other evidence to support your response (PDF, PNG, JPG)
-                </small>
+                <div class="answer-row">
+                    <div class="answer-dropdown">
+                        <label for="answer-level">Maturity Level:</label>
+                        <select id="answer-level" name="answer_level" onchange="updateAnswerText()">
+                            <option value="">Select your maturity level...</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="answer-row">
+                    <div class="answer-text">
+                        <label for="answer-details">Additional Details:</label>
+                        <textarea id="answer-details" name="answer_details" placeholder="Please provide detailed information about your current practices, processes, and capabilities for this question. Detailed answers are recommended but not mandatory..."></textarea>
+                    </div>
+                </div>
             </div>
 
             <div class="navigation">
@@ -375,14 +464,29 @@
         let responses = {};
         let assessmentId = null;
 
-        // Show pre-assessment info first
+        // Show pre-assessment info first, unless resuming
         window.onload = function() {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const isResume = urlParams.get('resume') === '1';
+                if (isResume) {
+                    // Skip pre-assessment, load questions immediately
+                    document.getElementById('pre-assessment-card').style.display = 'none';
+                    document.getElementById('loading').style.display = 'block';
+                    document.getElementById('question-card').style.display = 'none';
+                    loadAssessment();
+                    return;
+                }
+            } catch (e) {
+                // fallback: show pre-assessment
+            }
             document.getElementById('pre-assessment-card').style.display = 'block';
             document.getElementById('loading').style.display = 'none';
             document.getElementById('question-card').style.display = 'none';
-        };
+        }
 
         function startAssessment() {
+            console.log('Starting assessment...');
             document.getElementById('pre-assessment-card').style.display = 'none';
             document.getElementById('loading').style.display = 'block';
             loadAssessment();
@@ -391,8 +495,10 @@
         // Load assessment data
         async function loadAssessment() {
             try {
+                console.log('Loading assessment data...');
                 const response = await fetch('/get_assessment_progress');
                 const data = await response.json();
+                console.log('Assessment data response:', data);
                 
                 if (data.status === 'success') {
                     assessmentId = data.assessment_id;
@@ -424,6 +530,9 @@
                     document.getElementById('loading').style.display = 'none';
                     document.getElementById('question-card').style.display = 'block';
                     
+                    // Update assessment time based on number of questions
+                    updateAssessmentTime(questions.length);
+                    
                     showQuestion();
                 } else {
                     alert(data.message || 'Error loading assessment');
@@ -434,6 +543,23 @@
                 alert('Connection error. Please try again.');
                 window.location.href = '/dashboard';
             }
+        }
+
+        function updateAssessmentTime(questionCount) {
+            // Calculate time estimate: approximately 1-1.5 minutes per question
+            const minTime = Math.ceil(questionCount * 1);
+            const maxTime = Math.ceil(questionCount * 1.5);
+            
+            let timeText;
+            if (questionCount <= 20) {
+                timeText = `${minTime} to ${maxTime} minutes`;
+            } else if (questionCount <= 40) {
+                timeText = `${minTime} to ${maxTime} minutes`;
+            } else {
+                timeText = `${minTime} to ${maxTime} minutes`;
+            }
+            
+            document.getElementById('assessment-time').textContent = timeText;
         }
 
         function showQuestion() {
@@ -458,7 +584,25 @@
             
             // Load existing response if any
             const existingResponse = responses[key];
-            document.getElementById('answer').value = existingResponse ? existingResponse.answer : '';
+            
+            // Populate dropdown with answer options
+            const dropdown = document.getElementById('answer-level');
+            dropdown.innerHTML = '<option value="">Select your maturity level...</option>';
+            
+            if (question.answer_options && question.answer_options.length > 0) {
+                question.answer_options.forEach((option, index) => {
+                    const optionElement = document.createElement('option');
+                    optionElement.value = option;
+                    optionElement.textContent = option;
+                    if (existingResponse && existingResponse.answer_level === option) {
+                        optionElement.selected = true;
+                    }
+                    dropdown.appendChild(optionElement);
+                });
+            }
+            
+            // Load existing details
+            document.getElementById('answer-details').value = existingResponse ? (existingResponse.answer_details || '') : '';
             
             // Update progress
             updateProgress();
@@ -467,6 +611,26 @@
             document.getElementById('prev-btn').disabled = currentQuestionIndex === 0;
             document.getElementById('next-btn').textContent = 
                 currentQuestionIndex === questions.length - 1 ? 'Complete Assessment' : 'Next Question';
+        }
+
+        function updateAnswerText() {
+            const selectedLevel = document.getElementById('answer-level').value;
+            const detailsField = document.getElementById('answer-details');
+            
+            if (selectedLevel) {
+                // Pre-populate with some context based on the selected level
+                const levelDescriptions = {
+                    '0-20%': 'Describe your current state: No capability or awareness - No processes, tools, or understanding',
+                    '21-40%': 'Describe your current state: Basic awareness - Ad-hoc activities, limited understanding, no formal processes',
+                    '41-60%': 'Describe your current state: Some processes in place - Inconsistent execution, basic tools, partial understanding',
+                    '61-80%': 'Describe your current state: Well-defined processes - Consistent execution, good tools, strong understanding',
+                    '81-100%': 'Describe your current state: Optimized and automated - Continuous improvement, advanced tools, expert level'
+                };
+                
+                if (levelDescriptions[selectedLevel]) {
+                    detailsField.placeholder = levelDescriptions[selectedLevel];
+                }
+            }
         }
 
         function updateProgress() {
@@ -480,10 +644,11 @@
         }
 
         async function saveCurrentResponse() {
-            const answer = document.getElementById('answer').value.trim();
+            const answerLevel = document.getElementById('answer-level').value;
+            const answerDetails = document.getElementById('answer-details').value.trim();
             
-            if (!answer) {
-                alert('Please provide a response before continuing.');
+            if (!answerLevel) {
+                alert('Please select a maturity level before continuing.');
                 return false;
             }
             
@@ -491,13 +656,8 @@
             const formData = new FormData();
             formData.append('capability_id', question.capability_id);
             formData.append('lens_id', question.lens_id);
-            formData.append('answer', answer);
-            
-            // Add file uploads
-            const evidenceFiles = document.getElementById('evidence').files;
-            for (let i = 0; i < evidenceFiles.length; i++) {
-                formData.append('evidence', evidenceFiles[i]);
-            }
+            formData.append('answer_level', answerLevel);
+            formData.append('answer_details', answerDetails);
             
             try {
                 const response = await fetch('/submit_assessment', {
@@ -510,10 +670,10 @@
                 if (result.status === 'success') {
                     // Update local responses
                     const key = `${question.capability_id}_${question.lens_id}`;
-                    responses[key] = { answer: answer };
-                    
-                    // Clear file input for next question
-                    document.getElementById('evidence').value = '';
+                    responses[key] = { 
+                        answer_level: answerLevel,
+                        answer_details: answerDetails
+                    };
                     
                     return true;
                 } else {
@@ -547,12 +707,15 @@
         }
 
         async function saveAndExit() {
-            const answer = document.getElementById('answer').value.trim();
-            
-            if (answer && await saveCurrentResponse()) {
-                alert('Progress saved successfully!');
+            const answerLevel = document.getElementById('answer-level').value;
+            if (questions.length > 0 && document.getElementById('question-card').style.display !== 'none' && answerLevel) {
+                const saved = await saveCurrentResponse();
+                if (!saved) {
+                    // If saving failed (e.g., validation error), do not redirect
+                    return;
+                }
             }
-            
+            // If no maturity level is selected, just redirect (no alert)
             window.location.href = '/dashboard';
         }
 
@@ -564,6 +727,21 @@
 
         async function completeAssessment() {
             try {
+                // Show processing message
+                const completionCard = document.getElementById('completion-card');
+                completionCard.innerHTML = `
+                    <div class="completion-icon">🤖</div>
+                    <h2>Processing Your Assessment</h2>
+                    <p>Please wait while we analyze your answers with AI to create your personalized report...</p>
+                    <div class="spinner" style="margin: 20px auto; width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                    <style>
+                        @keyframes spin {
+                            0% { transform: rotate(0deg); }
+                            100% { transform: rotate(360deg); }
+                        }
+                    </style>
+                `;
+                
                 const response = await fetch('/complete_assessment', {
                     method: 'POST'
                 });

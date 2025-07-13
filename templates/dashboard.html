@@ -283,6 +283,10 @@
             color: #666;
         }
 
+        form#assessment-form #start-btn {
+            margin-top: 24px;
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 10px;
@@ -312,6 +316,7 @@
             }
         }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="container">
@@ -327,23 +332,23 @@
         </div>
         <div id="stats-grid" class="stats-grid" style="margin-bottom: 30px;"></div>
 
+        <!-- Company Comparison Chart -->
+        <div class="new-assessment">
+            <h2>🏢 Company Performance Comparison</h2>
+            <p style="color: #666; margin-bottom: 20px;">Compare your company's latest performance across all FinOps domains against industry benchmarks.</p>
+            <div id="company-comparison-chart" style="height: 400px; position: relative;">
+                <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #aaa; font-size: 1.1rem;">
+                    Loading comparison data...
+                </div>
+            </div>
+        </div>
+
         <div class="new-assessment">
             <h2>🚀 Start New Assessment</h2>
-            
             <form id="assessment-form">
-                <div class="assessment-options">
-                    {% for scope in scopes %}
-                    <div class="scope-card" data-scope="{{ scope.id }}">
-                        <h3>{{ scope.name }}</h3>
-                        <p>{{ scope.description }}</p>
-                    </div>
-                    {% endfor %}
-                </div>
-
-                <div class="domain-selection" id="domain-selection">
-                    <h3>Assessment Type</h3>
-                    <p>Choose between a complete assessment or focus on a specific domain:</p>
-                    
+                <div class="domain-selection show" id="domain-selection">
+                    <h3>Choose a Domain</h3>
+                    <p>Select a FinOps domain to begin your assessment:</p>
                     <div class="domain-grid">
                         <div class="domain-card" data-domain="">
                             <h4>Complete Assessment</h4>
@@ -357,7 +362,6 @@
                         {% endfor %}
                     </div>
                 </div>
-
                 <button type="submit" class="btn" id="start-btn" disabled>Start Assessment</button>
             </form>
         </div>
@@ -402,77 +406,40 @@
     </div>
 
     <script>
-        let selectedScope = null;
+        window.FINOPS_DOMAINS = {{ domains|tojson|safe }};
         let selectedDomain = null;
-
-        // Scope selection
-        document.querySelectorAll('.scope-card').forEach(card => {
-            card.addEventListener('click', function() {
-                // Remove previous selection
-                document.querySelectorAll('.scope-card').forEach(c => c.classList.remove('selected'));
-                
-                // Select current
-                this.classList.add('selected');
-                selectedScope = this.dataset.scope;
-                
-                // Show domain selection
-                document.getElementById('domain-selection').classList.add('show');
-                
-                updateStartButton();
-            });
-        });
-
         // Domain selection
         document.querySelectorAll('.domain-card').forEach(card => {
             card.addEventListener('click', function() {
-                // Remove previous selection
                 document.querySelectorAll('.domain-card').forEach(c => c.classList.remove('selected'));
-                
-                // Select current
                 this.classList.add('selected');
                 selectedDomain = this.dataset.domain;
-                
                 updateStartButton();
             });
         });
-
         function updateStartButton() {
             const startBtn = document.getElementById('start-btn');
-            if (selectedScope && selectedDomain !== null) {
-                startBtn.disabled = false;
-            } else {
-                startBtn.disabled = true;
-            }
+            startBtn.disabled = !selectedDomain;
         }
-
         // Form submission
         document.getElementById('assessment-form').addEventListener('submit', async function(e) {
             e.preventDefault();
-            
-            if (!selectedScope || selectedDomain === null) {
-                alert('Please select a scope and assessment type.');
+            if (!selectedDomain) {
+                alert('Please select a domain.');
                 return;
             }
-            
             const startBtn = document.getElementById('start-btn');
             const originalText = startBtn.textContent;
             startBtn.textContent = 'Starting...';
             startBtn.disabled = true;
-            
             try {
                 const formData = new FormData();
-                formData.append('scope_id', selectedScope);
-                if (selectedDomain) {
-                    formData.append('domain', selectedDomain);
-                }
-                
+                formData.append('domain', selectedDomain);
                 const response = await fetch('/start_assessment', {
                     method: 'POST',
                     body: formData
                 });
-                
                 const result = await response.json();
-                
                 if (result.status === 'success') {
                     window.location.href = '/assessment';
                 } else {
@@ -519,6 +486,97 @@
             }
         }
         loadStats();
+        
+        // Company comparison chart
+        async function loadCompanyComparison() {
+            try {
+                const res = await fetch('/company_benchmarks');
+                const data = await res.json();
+                
+                if (data.status === 'success' && data.data) {
+                    const companyData = data.data.company;
+                    const industryData = data.data.industry;
+                    
+                    // Use the global DOMAINS list
+                    const domains = window.FINOPS_DOMAINS;
+                    const companyScores = [];
+                    const industryScores = [];
+                    
+                    domains.forEach(domain => {
+                        // Always show both bars: if missing, use 0
+                        companyScores.push(companyData[domain] && companyData[domain].overall_percentage ? companyData[domain].overall_percentage : 0);
+                        industryScores.push(industryData[domain] && industryData[domain].average ? industryData[domain].average : 0);
+                    });
+                    
+                    if (domains.length > 0) {
+                        const ctx = document.getElementById('company-comparison-chart');
+                        ctx.innerHTML = '<canvas id="comparison-chart"></canvas>';
+                        
+                        new Chart(document.getElementById('comparison-chart'), {
+                            type: 'bar',
+                            data: {
+                                labels: domains,
+                                datasets: [
+                                    {
+                                        label: 'Your Company',
+                                        data: companyScores,
+                                        backgroundColor: '#667eea',
+                                        borderRadius: 8
+                                    },
+                                    {
+                                        label: 'Industry Average',
+                                        data: industryScores,
+                                        backgroundColor: '#aaa',
+                                        borderRadius: 8
+                                    }
+                                ]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        position: 'top',
+                                        labels: {
+                                            usePointStyle: true,
+                                            padding: 20
+                                        }
+                                    },
+                                    title: {
+                                        display: true,
+                                        text: 'Company vs Industry Performance by Domain',
+                                        font: {
+                                            size: 16,
+                                            weight: 'bold'
+                                        }
+                                    }
+                                },
+                                scales: {
+                                    y: {
+                                        display: false,
+                                        beginAtZero: true,
+                                        max: 100
+                                    },
+                                    x: {
+                                        grid: { display: false }
+                                    }
+                                }
+                            }
+                        });
+                    } else {
+                        document.getElementById('company-comparison-chart').innerHTML = 
+                            '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #666; font-size: 1.1rem;">No comparison data available yet. Complete some assessments to see your company\'s performance compared to industry benchmarks.</div>';
+                    }
+                } else {
+                    document.getElementById('company-comparison-chart').innerHTML = 
+                        '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #666; font-size: 1.1rem;">Unable to load comparison data.</div>';
+                }
+            } catch (e) {
+                document.getElementById('company-comparison-chart').innerHTML = 
+                    '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #666; font-size: 1.1rem;">Error loading comparison data.</div>';
+            }
+        }
+        loadCompanyComparison();
     </script>
 </body>
 </html>

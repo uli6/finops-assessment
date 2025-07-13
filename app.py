@@ -25,6 +25,7 @@ from weasyprint import HTML, CSS
 from io import BytesIO
 import hashlib
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
+from functools import lru_cache
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(32)
@@ -233,39 +234,565 @@ LENSES = [
     {"id": "automation", "name": "Automation", "weight": 5}
 ]
 
+# Updated FinOps Framework with 4 Domains and Detailed Capabilities
 CAPABILITIES = [
-    # Understanding Usage & Cost
-    {"id": "cost_allocation", "name": "Cost Allocation", "domain": "Understanding Usage & Cost"},
-    {"id": "data_analysis_showback", "name": "Data Analysis and Showback", "domain": "Understanding Usage & Cost"},
-    {"id": "managing_anomalies", "name": "Managing Anomalies", "domain": "Understanding Usage & Cost"},
-    {"id": "managing_shared_cost", "name": "Managing Shared Cost", "domain": "Understanding Usage & Cost"},
+    # Domain 1: Understand Usage & Cost
+    {"id": "data_ingestion", "name": "Data Ingestion", "domain": "Understand Usage & Cost"},
+    {"id": "allocation", "name": "Allocation", "domain": "Understand Usage & Cost"},
+    {"id": "reporting_analytics", "name": "Reporting & Analytics", "domain": "Understand Usage & Cost"},
+    {"id": "anomaly_management", "name": "Anomaly Management", "domain": "Understand Usage & Cost"},
     
-    # Quantify Business Value
+    # Domain 2: Quantify Business Value
     {"id": "forecasting", "name": "Forecasting", "domain": "Quantify Business Value"},
-    {"id": "budget_management", "name": "Budget Management", "domain": "Quantify Business Value"},
+    {"id": "budgeting", "name": "Budgeting", "domain": "Quantify Business Value"},
+    {"id": "benchmark", "name": "Benchmark", "domain": "Quantify Business Value"},
     {"id": "unit_economics", "name": "Unit Economics", "domain": "Quantify Business Value"},
-    {"id": "measuring_unit_costs", "name": "Measuring Unit Costs", "domain": "Quantify Business Value"},
-    {"id": "chargeback_finance_integration", "name": "Chargeback & Finance Integration", "domain": "Quantify Business Value"},
     
-    # Optimize Usage & Cost
-    {"id": "rightsizing", "name": "Rightsizing", "domain": "Optimize Usage & Cost"},
-    {"id": "workload_management_automation", "name": "Workload Management & Automation", "domain": "Optimize Usage & Cost"},
+    # Domain 3: Optimize Usage & Cost
+    {"id": "architecting_cloud", "name": "Architecting for Cloud", "domain": "Optimize Usage & Cost"},
     {"id": "rate_optimization", "name": "Rate Optimization", "domain": "Optimize Usage & Cost"},
+    {"id": "workload_optimization", "name": "Workload Optimization", "domain": "Optimize Usage & Cost"},
     {"id": "cloud_sustainability", "name": "Cloud Sustainability", "domain": "Optimize Usage & Cost"},
-    {"id": "onboarding_workloads", "name": "Onboarding Workloads", "domain": "Optimize Usage & Cost"},
-    {"id": "resource_lifecycle_management", "name": "Resource Lifecycle Management", "domain": "Optimize Usage & Cost"},
-    {"id": "cloud_policy_governance", "name": "Cloud Policy & Governance", "domain": "Optimize Usage & Cost"},
+    {"id": "licensing_saas", "name": "Licensing & SaaS", "domain": "Optimize Usage & Cost"},
     
-    # Manage the FinOps Practice
+    # Domain 4: Manage the FinOps Practice
+    {"id": "finops_practice_operations", "name": "FinOps Practice Operations", "domain": "Manage the FinOps Practice"},
+    {"id": "policy_governance", "name": "Policy & Governance", "domain": "Manage the FinOps Practice"},
+    {"id": "finops_assessment", "name": "FinOps Assessment", "domain": "Manage the FinOps Practice"},
+    {"id": "finops_tools_services", "name": "FinOps Tools & Services", "domain": "Manage the FinOps Practice"},
     {"id": "finops_education_enablement", "name": "FinOps Education & Enablement", "domain": "Manage the FinOps Practice"},
-    {"id": "cloud_provider_data_ingestion", "name": "Cloud Provider Data Ingestion", "domain": "Manage the FinOps Practice"},
-    {"id": "data_normalization", "name": "Data Normalization", "domain": "Manage the FinOps Practice"},
-    {"id": "managing_commitment_based_discounts", "name": "Managing Commitment Based Discounts", "domain": "Manage the FinOps Practice"},
-    {"id": "establishing_finops_culture", "name": "Establishing FinOps Culture", "domain": "Manage the FinOps Practice"},
-    {"id": "intersecting_frameworks", "name": "Intersecting Frameworks", "domain": "Manage the FinOps Practice"}
+    {"id": "invoicing_chargeback", "name": "Invoicing & Chargeback", "domain": "Manage the FinOps Practice"},
+    {"id": "onboarding_workloads", "name": "Onboarding Workloads", "domain": "Manage the FinOps Practice"},
+    {"id": "intersecting_disciplines", "name": "Intersecting Disciplines", "domain": "Manage the FinOps Practice"}
 ]
 
-DOMAINS = ["Understanding Usage & Cost", "Quantify Business Value", "Optimize Usage & Cost", "Manage the FinOps Practice"]
+DOMAINS = ["Understand Usage & Cost", "Quantify Business Value", "Optimize Usage & Cost", "Manage the FinOps Practice"]
+
+# Comprehensive Question Bank for Each Capability and Lens
+QUESTIONS = {
+    # Domain 1: Understand Usage & Cost
+    "data_ingestion": {
+        "knowledge": [
+            "What percentage of your team members can explain the key data sources required for effective FinOps practice?",
+            "How well do stakeholders understand the difference between billing data, usage data, and metadata in your organization?"
+        ],
+        "process": [
+            "How standardized are your data ingestion processes across different cloud providers?",
+            "What percentage of your data ingestion processes have documented procedures and responsible owners?"
+        ],
+        "metrics": [
+            "What percentage of your required data sources are successfully ingested and available for analysis?",
+            "How do you measure the quality and completeness of your ingested data?"
+        ],
+        "adoption": [
+            "What percentage of your teams regularly use centralized data ingestion processes rather than maintaining their own data silos?",
+            "How consistently do teams follow established data ingestion standards?"
+        ],
+        "automation": [
+            "What percentage of your data ingestion processes are automated?",
+            "How automated is your data quality validation process?"
+        ]
+    },
+    "allocation": {
+        "knowledge": [
+            "What percentage of your organization understands the importance of proper cost allocation for cloud resources?",
+            "How well do teams understand the allocation methodologies being used in your organization?"
+        ],
+        "process": [
+            "How consistently are allocation rules applied across all cloud resources?",
+            "What percentage of your allocation processes have documented methodologies and approval workflows?"
+        ],
+        "metrics": [
+            "What percentage of your cloud costs can be allocated to specific business units, projects, or services?",
+            "What percentage of your cloud resources are properly tagged for cost allocation purposes?"
+        ],
+        "adoption": [
+            "What percentage of your teams actively participate in the cost allocation process?",
+            "How widely are allocated costs used for decision-making across the organization?"
+        ],
+        "automation": [
+            "What percentage of your cost allocation processes are automated?",
+            "How automated is the validation and reconciliation of allocated costs?"
+        ]
+    },
+    "reporting_analytics": {
+        "knowledge": [
+            "What percentage of your stakeholders can interpret and act on FinOps reports and analytics?",
+            "How well do teams understand which metrics are most relevant for their specific roles and responsibilities?"
+        ],
+        "process": [
+            "How standardized are your reporting processes across different stakeholder groups?",
+            "What percentage of your reports have defined refresh schedules and delivery mechanisms?"
+        ],
+        "metrics": [
+            "What percentage of your reports provide actionable insights rather than just raw data?",
+            "How effectively do your analytics identify optimization opportunities?"
+        ],
+        "adoption": [
+            "What percentage of your teams regularly use FinOps reports for decision-making?",
+            "How consistently do stakeholders access and act on provided reports?"
+        ],
+        "automation": [
+            "What percentage of your reports are generated automatically?",
+            "How automated is the distribution and consumption of your reports?"
+        ]
+    },
+    "anomaly_management": {
+        "knowledge": [
+            "What percentage of your organization understands what constitutes a cost anomaly and its potential impact?",
+            "How well do teams understand their roles and responsibilities when anomalies are detected?"
+        ],
+        "process": [
+            "How well-defined are your anomaly detection and response processes?",
+            "What percentage of detected anomalies follow a standardized investigation and resolution workflow?"
+        ],
+        "metrics": [
+            "What percentage of cost anomalies are detected within your target timeframe?",
+            "How effectively do you measure the impact and resolution time of anomalies?"
+        ],
+        "adoption": [
+            "What percentage of your teams actively participate in anomaly monitoring and response?",
+            "How consistently do teams respond to anomaly alerts within defined SLAs?"
+        ],
+        "automation": [
+            "What percentage of your anomaly detection is automated?",
+            "How automated are your anomaly notification and escalation processes?"
+        ]
+    },
+    
+    # Domain 2: Quantify Business Value
+    "forecasting": {
+        "knowledge": [
+            "What percentage of your stakeholders understand the difference between trends, seasonal patterns, and growth forecasting?",
+            "How well do teams understand the data requirements and limitations of different forecasting methodologies?"
+        ],
+        "process": [
+            "How standardized are your forecasting methodologies across different business units and time horizons?",
+            "What percentage of your forecasts have defined update cycles and review processes?"
+        ],
+        "metrics": [
+            "What percentage of your forecasts achieve acceptable accuracy levels within your defined tolerance range?",
+            "How effectively do you measure and improve forecast accuracy over time?"
+        ],
+        "adoption": [
+            "What percentage of your business decisions incorporate cloud cost forecasts?",
+            "How consistently do teams use forecasts for capacity planning and budget preparation?"
+        ],
+        "automation": [
+            "What percentage of your forecasting processes are automated?",
+            "How automated is the generation and distribution of forecast reports?"
+        ]
+    },
+    "budgeting": {
+        "knowledge": [
+            "What percentage of your organization understands the relationship between cloud budgets and business objectives?",
+            "How well do teams understand budget variance analysis and corrective actions?"
+        ],
+        "process": [
+            "How standardized are your budget creation and approval processes across the organization?",
+            "What percentage of your budgets have defined monitoring and alerting mechanisms?"
+        ],
+        "metrics": [
+            "What percentage of your teams consistently stay within their allocated cloud budgets?",
+            "How effectively do you track and analyze budget variance trends?"
+        ],
+        "adoption": [
+            "What percentage of your cloud spending is covered by formal budget allocations?",
+            "How consistently do teams use budget information for spending decisions?"
+        ],
+        "automation": [
+            "What percentage of your budget monitoring and alerting is automated?",
+            "How automated are your budget approval and modification workflows?"
+        ]
+    },
+    "benchmark": {
+        "knowledge": [
+            "What percentage of your organization understands relevant benchmarking metrics for cloud efficiency?",
+            "How well do teams understand how to interpret benchmark data and identify improvement opportunities?"
+        ],
+        "process": [
+            "How standardized are your benchmarking processes and methodologies?",
+            "What percentage of your benchmarking activities follow defined data collection and analysis procedures?"
+        ],
+        "metrics": [
+            "What percentage of your key cloud metrics are regularly benchmarked against relevant standards?",
+            "How effectively do you track improvement progress based on benchmark comparisons?"
+        ],
+        "adoption": [
+            "What percentage of your teams regularly use benchmark data for performance evaluation and goal setting?",
+            "How consistently do teams incorporate benchmark insights into their optimization strategies?"
+        ],
+        "automation": [
+            "What percentage of your benchmarking data collection and analysis is automated?",
+            "How automated is the generation and distribution of benchmark reports?"
+        ]
+    },
+    "unit_economics": {
+        "knowledge": [
+            "What percentage of your organization understands how cloud costs relate to business unit economics?",
+            "How well do teams understand the metrics that drive unit cost calculations in your business model?"
+        ],
+        "process": [
+            "How standardized are your unit economics calculation methodologies across different products or services?",
+            "What percentage of your unit economics analyses include cloud cost components?"
+        ],
+        "metrics": [
+            "What percentage of your products or services have defined and tracked unit cost metrics?",
+            "How effectively do you measure the impact of cloud optimization on unit economics?"
+        ],
+        "adoption": [
+            "What percentage of your business decisions consider unit economics including cloud costs?",
+            "How consistently do product teams use unit economics for pricing and investment decisions?"
+        ],
+        "automation": [
+            "What percentage of your unit economics calculations are automated?",
+            "How automated is the tracking and reporting of unit cost trends?"
+        ]
+    },
+    
+    # Domain 3: Optimize Usage & Cost
+    "architecting_cloud": {
+        "knowledge": [
+            "What percentage of your architects and developers understand cloud-native design patterns for cost optimization?",
+            "How well do teams understand the cost implications of different architectural decisions?"
+        ],
+        "process": [
+            "How standardized are your architecture review processes for cost and sustainability considerations?",
+            "What percentage of your architectural decisions include formal cost impact assessments?"
+        ],
+        "metrics": [
+            "What percentage of your applications follow cloud-native architectural best practices for cost efficiency?",
+            "How effectively do you measure the cost efficiency of different architectural patterns in your environment?"
+        ],
+        "adoption": [
+            "What percentage of your teams consistently apply cloud-native architectural principles in new development?",
+            "How consistently do teams refactor existing applications using cost-optimized architectural patterns?"
+        ],
+        "automation": [
+            "What percentage of your architectural compliance checks are automated?",
+            "How automated is the enforcement of cost-optimized architectural standards?"
+        ]
+    },
+    "rate_optimization": {
+        "knowledge": [
+            "What percentage of your teams understand the different pricing models available across your cloud providers?",
+            "How well do stakeholders understand when and how to apply different commitment types (Reserved Instances, Savings Plans, etc.)?"
+        ],
+        "process": [
+            "How standardized are your rate optimization analysis and decision-making processes?",
+            "What percentage of your rate optimization opportunities are evaluated using defined criteria and approval workflows?"
+        ],
+        "metrics": [
+            "What percentage of your eligible workloads are covered by cost-effective rate optimization strategies?",
+            "How effectively do you measure and track the savings achieved through rate optimization?"
+        ],
+        "adoption": [
+            "What percentage of your teams actively participate in rate optimization planning and implementation?",
+            "How consistently do teams follow rate optimization recommendations and guidelines?"
+        ],
+        "automation": [
+            "What percentage of your rate optimization analysis and monitoring is automated?",
+            "How automated is the implementation and management of rate optimization commitments?"
+        ]
+    },
+    "workload_optimization": {
+        "knowledge": [
+            "What percentage of your development teams understand cloud-native optimization principles and best practices?",
+            "How well do teams understand the relationship between application architecture and cloud costs?"
+        ],
+        "process": [
+            "How standardized are your workload optimization assessment and implementation processes?",
+            "What percentage of your workloads undergo regular optimization reviews using defined criteria?"
+        ],
+        "metrics": [
+            "What percentage of your workloads are rightsized according to actual usage patterns?",
+            "How effectively do you measure workload efficiency and optimization impact?"
+        ],
+        "adoption": [
+            "What percentage of your development teams actively implement workload optimization practices?",
+            "How consistently do teams incorporate optimization considerations into their development lifecycle?"
+        ],
+        "automation": [
+            "What percentage of your workload optimization recommendations are generated automatically?",
+            "How automated is the implementation of workload optimization changes?"
+        ]
+    },
+    "cloud_sustainability": {
+        "knowledge": [
+            "What percentage of your organization understands the relationship between cloud usage patterns and environmental impact?",
+            "How well do teams understand sustainable cloud practices and their implementation?"
+        ],
+        "process": [
+            "How standardized are your sustainability assessment and optimization processes?",
+            "What percentage of your cloud optimization decisions include sustainability impact considerations?"
+        ],
+        "metrics": [
+            "What percentage of your cloud resources are optimized for both cost and carbon efficiency?",
+            "How effectively do you measure and track the environmental impact of your cloud usage?"
+        ],
+        "adoption": [
+            "What percentage of your teams actively consider sustainability in their cloud usage decisions?",
+            "How consistently do teams implement sustainable cloud practices in their daily operations?"
+        ],
+        "automation": [
+            "What percentage of your sustainability monitoring and reporting is automated?",
+            "How automated are your sustainable cloud optimization implementations?"
+        ]
+    },
+    "licensing_saas": {
+        "knowledge": [
+            "What percentage of your organization understands the cost implications of different software licensing models in cloud environments?",
+            "How well do teams understand SaaS optimization strategies and vendor management best practices?"
+        ],
+        "process": [
+            "How standardized are your software licensing and SaaS procurement processes?",
+            "What percentage of your software licenses and SaaS subscriptions undergo regular utilization and optimization reviews?"
+        ],
+        "metrics": [
+            "What percentage of your software licenses are optimally utilized according to actual usage patterns?",
+            "How effectively do you measure and track software licensing costs and optimization opportunities?"
+        ],
+        "adoption": [
+            "What percentage of your teams actively manage and optimize their software licensing and SaaS usage?",
+            "How consistently do teams follow established software procurement and optimization guidelines?"
+        ],
+        "automation": [
+            "What percentage of your software license monitoring and optimization is automated?",
+            "How automated are your software procurement and license management workflows?"
+        ]
+    },
+    
+    # Domain 4: Manage the FinOps Practice
+    "finops_practice_operations": {
+        "knowledge": [
+            "What percentage of your organization understands the role and value of the FinOps practice?",
+            "How well do stakeholders understand their roles and responsibilities within the FinOps operating model?"
+        ],
+        "process": [
+            "How well-defined and documented are your FinOps operating procedures and workflows?",
+            "What percentage of your FinOps activities follow standardized operating procedures?"
+        ],
+        "metrics": [
+            "What percentage of your FinOps practice objectives have defined success metrics and KPIs?",
+            "How effectively do you measure the maturity and effectiveness of your FinOps practice?"
+        ],
+        "adoption": [
+            "What percentage of your organization actively participates in and supports the FinOps practice?",
+            "How consistently do teams engage with FinOps processes and follow established practices?"
+        ],
+        "automation": [
+            "What percentage of your FinOps operational tasks are automated?",
+            "How automated are your FinOps practice monitoring and reporting processes?"
+        ]
+    },
+    "policy_governance": {
+        "knowledge": [
+            "What percentage of your organization understands the cloud governance policies and their rationale?",
+            "How well do teams understand compliance requirements and governance procedures?"
+        ],
+        "process": [
+            "How comprehensive and well-documented are your cloud governance policies and procedures?",
+            "What percentage of your governance policies have defined enforcement mechanisms and compliance monitoring?"
+        ],
+        "metrics": [
+            "What percentage of your cloud resources comply with established governance policies?",
+            "How effectively do you measure and track policy compliance and governance effectiveness?"
+        ],
+        "adoption": [
+            "What percentage of your teams consistently follow established governance policies and procedures?",
+            "How consistently do teams incorporate governance considerations into their cloud usage decisions?"
+        ],
+        "automation": [
+            "What percentage of your governance policy enforcement is automated?",
+            "How automated are your compliance monitoring and violation remediation processes?"
+        ]
+    },
+    "finops_assessment": {
+        "knowledge": [
+            "What percentage of your organization understands the value and methodology of FinOps maturity assessments?",
+            "How well do stakeholders understand how to interpret assessment results and develop improvement plans?"
+        ],
+        "process": [
+            "How systematically and regularly do you conduct FinOps maturity assessments?",
+            "What percentage of your assessment results lead to documented improvement plans and actions?"
+        ],
+        "metrics": [
+            "What percentage of your FinOps capabilities have been formally assessed for maturity?",
+            "How effectively do you track improvement progress following assessment recommendations?"
+        ],
+        "adoption": [
+            "What percentage of your teams actively participate in and support FinOps assessments?",
+            "How consistently do teams implement assessment recommendations and improvement initiatives?"
+        ],
+        "automation": [
+            "What percentage of your assessment data collection and analysis is automated?",
+            "How automated are your assessment reporting and improvement tracking processes?"
+        ]
+    },
+    "finops_tools_services": {
+        "knowledge": [
+            "What percentage of your organization understands the available FinOps tools and their appropriate use cases?",
+            "How well do teams understand how to effectively integrate and utilize FinOps tools in their workflows?"
+        ],
+        "process": [
+            "How standardized are your FinOps tool selection, implementation, and management processes?",
+            "What percentage of your FinOps tools have defined integration, maintenance, and upgrade procedures?"
+        ],
+        "metrics": [
+            "What percentage of your FinOps requirements are adequately supported by your current tool portfolio?",
+            "How effectively do you measure tool utilization, performance, and ROI?"
+        ],
+        "adoption": [
+            "What percentage of your teams consistently use standardized FinOps tools for their cloud management activities?",
+            "How consistently do teams leverage tool capabilities to their full potential?"
+        ],
+        "automation": [
+            "What percentage of your FinOps tool management and maintenance activities are automated?",
+            "How automated are your tool integration and data synchronization processes?"
+        ]
+    },
+    "finops_education_enablement": {
+        "knowledge": [
+            "What percentage of your organization has received formal FinOps training appropriate to their role?",
+            "How well do different stakeholder groups understand FinOps concepts relevant to their responsibilities?"
+        ],
+        "process": [
+            "How structured and comprehensive is your FinOps education and training program?",
+            "What percentage of your training programs include regular updates and continuous learning opportunities?"
+        ],
+        "metrics": [
+            "What percentage of your staff demonstrate measurable improvement in FinOps knowledge and skills after training?",
+            "How effectively do you measure the impact of FinOps education on organizational performance?"
+        ],
+        "adoption": [
+            "What percentage of your teams actively participate in available FinOps education and training opportunities?",
+            "How consistently do teams apply learned FinOps concepts in their daily work?"
+        ],
+        "automation": [
+            "What percentage of your training delivery and tracking is automated or technology-enabled?",
+            "How automated are your learning assessment and certification processes?"
+        ]
+    },
+    "invoicing_chargeback": {
+        "knowledge": [
+            "What percentage of your organization understands chargeback principles and their business value?",
+            "How well do teams understand the invoicing processes and their responsibilities in cost accountability?"
+        ],
+        "process": [
+            "How standardized and comprehensive are your chargeback and invoicing processes?",
+            "What percentage of your cloud costs are subject to formal chargeback or showback processes?"
+        ],
+        "metrics": [
+            "What percentage of your invoices and chargebacks are accurate and delivered on time?",
+            "How effectively do you measure the impact of chargeback processes on cost accountability and optimization?"
+        ],
+        "adoption": [
+            "What percentage of your business units actively use chargeback information for budget planning and cost management?",
+            "How consistently do teams respond to and act on chargeback reports and invoices?"
+        ],
+        "automation": [
+            "What percentage of your invoicing and chargeback processes are automated?",
+            "How automated are your chargeback calculation, validation, and distribution processes?"
+        ]
+    },
+    "onboarding_workloads": {
+        "knowledge": [
+            "What percentage of your teams understand the importance of cost considerations during workload onboarding?",
+            "How well do teams understand the onboarding requirements for cost visibility, tagging, and governance?"
+        ],
+        "process": [
+            "How standardized and comprehensive are your workload onboarding processes?",
+            "What percentage of new workloads complete all required onboarding steps before going live?"
+        ],
+        "metrics": [
+            "What percentage of newly onboarded workloads are immediately visible in your cost management systems?",
+            "How effectively do you measure onboarding compliance and time-to-visibility for new workloads?"
+        ],
+        "adoption": [
+            "What percentage of your development teams consistently follow established onboarding procedures?",
+            "How consistently do teams incorporate FinOps requirements into their workload migration and deployment processes?"
+        ],
+        "automation": [
+            "What percentage of your workload onboarding processes are automated?",
+            "How automated are your onboarding compliance checks and validation processes?"
+        ]
+    },
+    "intersecting_disciplines": {
+        "knowledge": [
+            "What percentage of your organization understands how FinOps intersects with other disciplines like Security, DevOps, and ITAM?",
+            "How well do teams understand collaboration patterns and shared responsibilities across disciplines?"
+        ],
+        "process": [
+            "How well-established are your cross-functional collaboration processes and governance structures?",
+            "What percentage of your projects include formal collaboration with intersecting disciplines from the planning stage?"
+        ],
+        "metrics": [
+            "What percentage of your cross-functional initiatives achieve their intended outcomes and objectives?",
+            "How effectively do you measure collaboration effectiveness and shared value creation across disciplines?"
+        ],
+        "adoption": [
+            "What percentage of your teams actively collaborate with intersecting disciplines on cloud-related initiatives?",
+            "How consistently do teams incorporate input from intersecting disciplines in their decision-making processes?"
+        ],
+        "automation": [
+            "What percentage of your cross-functional processes and communications are supported by automation?",
+            "How automated are your shared workflows and data exchanges between disciplines?"
+        ]
+    }
+}
+
+# Answer options for all questions
+ANSWER_OPTIONS = {
+    "percentage_questions": [
+        "0-20%",
+        "21-40%", 
+        "41-60%",
+        "61-80%",
+        "81-100%"
+    ],
+    "understanding_questions": [
+        "No understanding",
+        "Basic awareness",
+        "Good understanding",
+        "Comprehensive understanding",
+        "Expert level understanding"
+    ],
+    "standardization_questions": [
+        "No standardization",
+        "Ad-hoc processes",
+        "Some standardization",
+        "Mostly standardized",
+        "Fully standardized and documented"
+    ],
+    "consistency_questions": [
+        "No consistency",
+        "Occasional adherence",
+        "Moderate consistency",
+        "High consistency",
+        "Full compliance with standards"
+    ],
+    "measurement_questions": [
+        "No measurement",
+        "Basic tracking",
+        "Moderate measurement",
+        "Comprehensive metrics",
+        "Advanced analytics with trends"
+    ],
+    "effectiveness_questions": [
+        "Not effective",
+        "Slightly effective",
+        "Moderately effective",
+        "Highly effective",
+        "Extremely effective with predictive capabilities"
+    ],
+    "automation_questions": [
+        "Fully manual",
+        "Basic automation",
+        "Moderate automation",
+        "Highly automated",
+        "Fully automated with intelligent capabilities"
+    ]
+}
 
 # Helper functions
 def send_email(to_email, subject, body):
@@ -342,143 +869,293 @@ def send_magic_link(email, token):
     return send_email(email, subject, body)
 
 def generate_question(capability, lens, scope):
-    """Generate specific question for capability + lens + scope combination"""
-    questions = {
-        "knowledge": {
-            "cost_allocation": "How well does your organization understand the principles and methods of cost allocation for {scope} resources?",
-            "data_analysis_showback": "What is your team's level of knowledge regarding data analysis and showback reporting for {scope} costs?",
-            "managing_anomalies": "How knowledgeable is your organization about identifying and understanding cost anomalies in {scope} environments?",
-            "managing_shared_cost": "What is your understanding of shared cost management strategies for {scope} resources?",
-            "forecasting": "How well does your team understand forecasting methodologies for {scope} spending?",
-            "budget_management": "What is your organization's knowledge level regarding budget management practices for {scope}?",
-            "unit_economics": "How well does your team understand unit economics concepts as they apply to {scope} resources?",
-            "measuring_unit_costs": "What is your knowledge of measuring and calculating unit costs for {scope} services?",
-            "chargeback_finance_integration": "How well does your organization understand chargeback mechanisms and finance integration for {scope}?",
-            "rightsizing": "What is your team's knowledge of rightsizing strategies and best practices for {scope} resources?",
-            "workload_management_automation": "How well does your organization understand workload management and automation opportunities in {scope}?",
-            "rate_optimization": "What is your knowledge of rate optimization strategies available for {scope} services?",
-            "cloud_sustainability": "How well does your team understand sustainability considerations and carbon footprint management for {scope}?",
-            "onboarding_workloads": "What is your organization's knowledge of best practices for onboarding new workloads to {scope}?",
-            "resource_lifecycle_management": "How well does your team understand resource lifecycle management for {scope} environments?",
-            "cloud_policy_governance": "What is your knowledge of policy and governance frameworks for {scope} resources?",
-            "finops_education_enablement": "How well does your organization understand FinOps education and enablement strategies for {scope}?",
-            "cloud_provider_data_ingestion": "What is your knowledge of data ingestion processes from {scope} providers?",
-            "data_normalization": "How well does your team understand data normalization techniques for {scope} cost data?",
-            "managing_commitment_based_discounts": "What is your knowledge of commitment-based discount programs available for {scope}?",
-            "establishing_finops_culture": "How well does your organization understand the cultural aspects of implementing FinOps for {scope}?",
-            "intersecting_frameworks": "What is your knowledge of how FinOps intersects with other frameworks when managing {scope} resources?"
+    """Generate specific question for capability + lens + scope combination using the new question structure"""
+    
+    # Get the questions for this capability and lens
+    capability_questions = QUESTIONS.get(capability, {})
+    lens_questions = capability_questions.get(lens, [])
+    
+    # Get scope name for context
+    scope_name = next((s['name'] for s in SCOPES if s['id'] == scope), scope)
+    
+    # If we have specific questions for this capability and lens, randomly select one
+    if lens_questions:
+        import random
+        # Randomly select one question from the available questions for this capability+lens
+        question_text = random.choice(lens_questions)
+        return question_text
+    
+    # Fallback to a generic question if no specific question is found
+    capability_name = next((c['name'] for c in CAPABILITIES if c['id'] == capability), capability)
+    lens_name = next((l['name'] for l in LENSES if l['id'] == lens), lens)
+    
+    return f"Please describe your organization's {lens_name.lower()} regarding {capability_name} for {scope_name}."
+
+def get_answer_options(question_text):
+    """Determine appropriate answer options based on question content"""
+    question_lower = question_text.lower()
+    
+    if "percentage" in question_lower or "what percentage" in question_lower:
+        return ANSWER_OPTIONS["percentage_questions"]
+    elif "understanding" in question_lower or "how well" in question_lower or "understand" in question_lower:
+        return ANSWER_OPTIONS["understanding_questions"]
+    elif "standardized" in question_lower or "standardization" in question_lower:
+        return ANSWER_OPTIONS["standardization_questions"]
+    elif "consistency" in question_lower or "consistently" in question_lower:
+        return ANSWER_OPTIONS["consistency_questions"]
+    elif "measure" in question_lower or "measurement" in question_lower or "track" in question_lower:
+        return ANSWER_OPTIONS["measurement_questions"]
+    elif "effective" in question_lower or "effectiveness" in question_lower:
+        return ANSWER_OPTIONS["effectiveness_questions"]
+    elif "automated" in question_lower or "automation" in question_lower:
+        return ANSWER_OPTIONS["automation_questions"]
+    else:
+        # Default to percentage questions
+        return ANSWER_OPTIONS["percentage_questions"]
+
+# Helper to get OpenAI client
+@lru_cache(maxsize=1)
+def get_openai_client():
+    import openai
+    api_key = os.getenv('OPENAI_API_KEY')
+    base_url = os.getenv('OPENAI_API_BASE', 'https://api.openai.com/v1')
+    return openai.OpenAI(api_key=api_key, base_url=base_url)
+
+def evaluate_finops_maturity(capability_name, lens_name, answer_level, answer_details, scope_name):
+    """
+    Evaluate FinOps maturity based on the FinOps Foundation Assessment Guide
+    """
+    # Map answer levels to maturity scores
+    level_mapping = {
+        '0-20%': 0,
+        '21-40%': 1,
+        '41-60%': 2,
+        '61-80%': 3,
+        '81-100%': 4
+    }
+    
+    # Get base score from level selection
+    base_score = level_mapping.get(answer_level, 2)
+    
+    # FinOps Foundation maturity characteristics
+    maturity_characteristics = {
+        0: {
+            'name': 'Crawl',
+            'description': 'No capability or awareness',
+            'characteristics': [
+                'No processes, tools, or understanding',
+                'Ad-hoc activities with no formal structure',
+                'No dedicated resources or ownership',
+                'Reactive approach to cost management'
+            ]
         },
-        "process": {
-            "cost_allocation": "What processes does your organization have in place for allocating {scope} costs to business units or projects?",
-            "data_analysis_showback": "What processes are established for regular data analysis and showback reporting of {scope} costs?",
-            "managing_anomalies": "What processes does your organization follow to detect, investigate, and resolve {scope} cost anomalies?",
-            "managing_shared_cost": "What processes are in place for managing and allocating shared {scope} costs across teams?",
-            "forecasting": "What forecasting processes does your organization use for {scope} spending predictions?",
-            "budget_management": "What budget management processes are established for {scope} resources?",
-            "unit_economics": "What processes does your organization use to calculate and track unit economics for {scope} services?",
-            "measuring_unit_costs": "What processes are in place for measuring and monitoring unit costs of {scope} resources?",
-            "chargeback_finance_integration": "What processes exist for chargeback and integration with finance systems for {scope} costs?",
-            "rightsizing": "What processes does your organization follow for rightsizing {scope} resources?",
-            "workload_management_automation": "What processes are established for workload management and automation in {scope} environments?",
-            "rate_optimization": "What processes does your organization use to optimize rates and pricing for {scope} services?",
-            "cloud_sustainability": "What processes are in place to manage and improve sustainability of {scope} resources?",
-            "onboarding_workloads": "What processes does your organization follow when onboarding new workloads to {scope}?",
-            "resource_lifecycle_management": "What processes are established for managing the complete lifecycle of {scope} resources?",
-            "cloud_policy_governance": "What governance processes are in place for {scope} policy management and compliance?",
-            "finops_education_enablement": "What processes does your organization use for FinOps education and enablement regarding {scope}?",
-            "cloud_provider_data_ingestion": "What processes are established for ingesting and processing data from {scope} providers?",
-            "data_normalization": "What processes does your organization follow for normalizing {scope} cost and usage data?",
-            "managing_commitment_based_discounts": "What processes are in place for managing commitment-based discounts for {scope} services?",
-            "establishing_finops_culture": "What processes does your organization use to establish and maintain FinOps culture for {scope}?",
-            "intersecting_frameworks": "What processes are established for integrating FinOps with other frameworks when managing {scope}?"
+        1: {
+            'name': 'Walk',
+            'description': 'Basic awareness and ad-hoc activities',
+            'characteristics': [
+                'Limited understanding and inconsistent execution',
+                'Some basic tools but no formal processes',
+                'Occasional activities without systematic approach',
+                'Basic cost visibility with manual processes'
+            ]
         },
-        "metrics": {
-            "cost_allocation": "What metrics does your organization track to measure the effectiveness of {scope} cost allocation?",
-            "data_analysis_showback": "What metrics are used to evaluate the success of data analysis and showback for {scope} costs?",
-            "managing_anomalies": "What metrics does your organization track for {scope} anomaly detection and resolution effectiveness?",
-            "managing_shared_cost": "What metrics are used to measure the accuracy and fairness of shared {scope} cost allocation?",
-            "forecasting": "What metrics does your organization use to measure forecasting accuracy for {scope} spending?",
-            "budget_management": "What metrics are tracked to evaluate budget management performance for {scope} resources?",
-            "unit_economics": "What unit economics metrics does your organization track for {scope} services?",
-            "measuring_unit_costs": "What metrics are used to track and benchmark unit costs of {scope} resources?",
-            "chargeback_finance_integration": "What metrics does your organization use to measure chargeback accuracy and finance integration for {scope}?",
-            "rightsizing": "What metrics are tracked to measure the effectiveness of {scope} rightsizing efforts?",
-            "workload_management_automation": "What metrics does your organization use to evaluate workload management and automation success in {scope}?",
-            "rate_optimization": "What metrics are tracked to measure rate optimization effectiveness for {scope} services?",
-            "cloud_sustainability": "What sustainability metrics does your organization track for {scope} resources?",
-            "onboarding_workloads": "What metrics are used to measure the efficiency and cost-effectiveness of onboarding workloads to {scope}?",
-            "resource_lifecycle_management": "What metrics does your organization track for {scope} resource lifecycle management?",
-            "cloud_policy_governance": "What metrics are used to measure policy compliance and governance effectiveness for {scope}?",
-            "finops_education_enablement": "What metrics does your organization track to measure FinOps education effectiveness for {scope}?",
-            "cloud_provider_data_ingestion": "What metrics are used to evaluate data ingestion quality and completeness from {scope} providers?",
-            "data_normalization": "What metrics does your organization track for {scope} data normalization accuracy and completeness?",
-            "managing_commitment_based_discounts": "What metrics are tracked to measure the effectiveness of commitment-based discount management for {scope}?",
-            "establishing_finops_culture": "What metrics does your organization use to measure FinOps culture adoption for {scope}?",
-            "intersecting_frameworks": "What metrics are tracked to measure the effectiveness of framework integration when managing {scope}?"
+        2: {
+            'name': 'Run',
+            'description': 'Some processes in place',
+            'characteristics': [
+                'Inconsistent execution with basic tools',
+                'Partial understanding and occasional success',
+                'Some formal processes but not consistently applied',
+                'Regular cost reviews with some automation'
+            ]
         },
-        "adoption": {
-            "cost_allocation": "How widely adopted are {scope} cost allocation practices across your organization?",
-            "data_analysis_showback": "What is the level of adoption of data analysis and showback practices for {scope} across teams?",
-            "managing_anomalies": "How broadly adopted are {scope} anomaly management practices throughout your organization?",
-            "managing_shared_cost": "What is the adoption level of shared {scope} cost management practices across business units?",
-            "forecasting": "How widely adopted are {scope} forecasting practices across your organization?",
-            "budget_management": "What is the level of adoption of budget management practices for {scope} resources?",
-            "unit_economics": "How broadly adopted are unit economics practices for {scope} services across your organization?",
-            "measuring_unit_costs": "What is the adoption level of unit cost measurement practices for {scope} resources?",
-            "chargeback_finance_integration": "How widely adopted are chargeback and finance integration practices for {scope} across your organization?",
-            "rightsizing": "What is the level of adoption of rightsizing practices for {scope} resources across teams?",
-            "workload_management_automation": "How broadly adopted are workload management and automation practices for {scope} across your organization?",
-            "rate_optimization": "What is the adoption level of rate optimization practices for {scope} services?",
-            "cloud_sustainability": "How widely adopted are sustainability practices for {scope} resources across your organization?",
-            "onboarding_workloads": "What is the level of adoption of standardized onboarding practices for {scope} workloads?",
-            "resource_lifecycle_management": "How broadly adopted are resource lifecycle management practices for {scope} across teams?",
-            "cloud_policy_governance": "What is the adoption level of policy and governance practices for {scope} resources?",
-            "finops_education_enablement": "How widely adopted are FinOps education and enablement practices for {scope} across your organization?",
-            "cloud_provider_data_ingestion": "What is the level of adoption of standardized data ingestion practices from {scope} providers?",
-            "data_normalization": "How broadly adopted are data normalization practices for {scope} across your organization?",
-            "managing_commitment_based_discounts": "What is the adoption level of commitment-based discount management for {scope} services?",
-            "establishing_finops_culture": "How widely adopted are FinOps cultural practices for {scope} across your organization?",
-            "intersecting_frameworks": "What is the level of adoption of integrated framework approaches when managing {scope}?"
+        3: {
+            'name': 'Fly',
+            'description': 'Well-defined processes',
+            'characteristics': [
+                'Consistent execution with good tools',
+                'Strong understanding and regular success',
+                'Formal processes with clear ownership',
+                'Proactive cost optimization with good visibility'
+            ]
         },
-        "automation": {
-            "cost_allocation": "What level of automation exists in your {scope} cost allocation processes?",
-            "data_analysis_showback": "How automated are your data analysis and showback processes for {scope} costs?",
-            "managing_anomalies": "What automation is in place for detecting and managing {scope} cost anomalies?",
-            "managing_shared_cost": "How automated are your shared {scope} cost management and allocation processes?",
-            "forecasting": "What level of automation exists in your {scope} forecasting processes?",
-            "budget_management": "How automated are your budget management processes for {scope} resources?",
-            "unit_economics": "What automation is in place for calculating and tracking unit economics for {scope} services?",
-            "measuring_unit_costs": "How automated are your unit cost measurement processes for {scope} resources?",
-            "chargeback_finance_integration": "What level of automation exists in your chargeback and finance integration for {scope}?",
-            "rightsizing": "How automated are your rightsizing processes for {scope} resources?",
-            "workload_management_automation": "What level of automation exists in your {scope} workload management processes?",
-            "rate_optimization": "How automated are your rate optimization processes for {scope} services?",
-            "cloud_sustainability": "What automation is in place for managing sustainability of {scope} resources?",
-            "onboarding_workloads": "How automated are your processes for onboarding new workloads to {scope}?",
-            "resource_lifecycle_management": "What level of automation exists in your {scope} resource lifecycle management?",
-            "cloud_policy_governance": "How automated are your policy and governance processes for {scope} resources?",
-            "finops_education_enablement": "What automation is in place for FinOps education and enablement regarding {scope}?",
-            "cloud_provider_data_ingestion": "How automated are your data ingestion processes from {scope} providers?",
-            "data_normalization": "What level of automation exists in your {scope} data normalization processes?",
-            "managing_commitment_based_discounts": "How automated are your commitment-based discount management processes for {scope}?",
-            "establishing_finops_culture": "What automation supports the establishment and maintenance of FinOps culture for {scope}?",
-            "intersecting_frameworks": "How automated are your processes for integrating FinOps with other frameworks when managing {scope}?"
+        4: {
+            'name': 'Optimize',
+            'description': 'Optimized and automated',
+            'characteristics': [
+                'Continuous improvement with advanced tools',
+                'Expert level understanding and consistent excellence',
+                'Automated processes with predictive capabilities',
+                'Strategic cost management with predictive analytics'
+            ]
         }
     }
     
-    scope_name = next((s['name'] for s in SCOPES if s['id'] == scope), scope)
-    question_template = questions.get(lens, {}).get(capability, f"Please describe your organization's {lens} regarding {capability} for {scope_name}.")
+    # Analyze the detailed response for additional insights
+    details_lower = answer_details.lower()
     
-    return question_template.format(scope=scope_name)
+    # Adjust score based on detailed response analysis
+    score_adjustment = 0
+    
+    # Positive indicators
+    positive_indicators = [
+        'automated', 'automation', 'consistent', 'processes', 'formal', 'structured',
+        'tools', 'platform', 'dashboard', 'monitoring', 'tracking', 'optimization',
+        'governance', 'policies', 'standards', 'training', 'education', 'team',
+        'ownership', 'responsibility', 'metrics', 'kpis', 'reporting', 'analysis'
+    ]
+    
+    # Negative indicators
+    negative_indicators = [
+        'manual', 'ad-hoc', 'inconsistent', 'no process', 'no tools', 'no understanding',
+        'limited', 'basic', 'occasional', 'reactive', 'no ownership', 'no responsibility',
+        'no monitoring', 'no tracking', 'no optimization', 'no governance'
+    ]
+    
+    positive_count = sum(1 for indicator in positive_indicators if indicator in details_lower)
+    negative_count = sum(1 for indicator in negative_indicators if indicator in details_lower)
+    
+    # Adjust score based on indicators
+    if positive_count > negative_count:
+        score_adjustment = min(1, (positive_count - negative_count) / 3)
+    elif negative_count > positive_count:
+        score_adjustment = max(-1, -(negative_count - positive_count) / 3)
+    
+    final_score = max(0, min(4, base_score + score_adjustment))
+    
+    # Get maturity level info
+    maturity_info = maturity_characteristics[int(final_score)]
+    
+    # Generate improvement suggestions based on current level
+    improvement_suggestions = generate_improvement_suggestions(capability_name, lens_name, final_score, maturity_info)
+    
+    return {
+        'score': final_score,
+        'maturity_level': maturity_info['name'],
+        'description': maturity_info['description'],
+        'characteristics': maturity_info['characteristics'],
+        'improvement_suggestions': improvement_suggestions,
+        'confidence': 'High' if abs(score_adjustment) < 0.5 else 'Medium',
+        'industry_comparison': get_industry_comparison(final_score, capability_name, lens_name),
+        'risks': get_risks(final_score, capability_name, lens_name)
+    }
+
+def generate_improvement_suggestions(capability_name, lens_name, current_score, maturity_info):
+    """Generate specific improvement suggestions based on current maturity level"""
+    
+    suggestions = {
+        0: [
+            "Establish basic awareness and understanding of FinOps principles",
+            "Begin with simple cost visibility and basic reporting",
+            "Identify key stakeholders and establish initial ownership",
+            "Start with manual processes and basic tools"
+        ],
+        1: [
+            "Develop formal processes and procedures",
+            "Implement basic automation and tooling",
+            "Establish regular review cycles and governance",
+            "Begin training and education programs"
+        ],
+        2: [
+            "Standardize processes across the organization",
+            "Enhance automation and tool integration",
+            "Implement comprehensive monitoring and alerting",
+            "Develop advanced analytics and reporting capabilities"
+        ],
+        3: [
+            "Optimize existing processes for efficiency",
+            "Implement predictive analytics and forecasting",
+            "Enhance cross-team collaboration and communication",
+            "Develop advanced automation and AI capabilities"
+        ],
+        4: [
+            "Focus on continuous improvement and innovation",
+            "Implement advanced predictive and prescriptive analytics",
+            "Develop strategic cost optimization strategies",
+            "Establish industry leadership and best practices"
+        ]
+    }
+    
+    base_suggestions = suggestions.get(int(current_score), suggestions[2])
+    
+    # Add capability-specific suggestions
+    capability_suggestions = get_capability_specific_suggestions(capability_name, lens_name, current_score)
+    
+    return base_suggestions + capability_suggestions
+
+def get_capability_specific_suggestions(capability_name, lens_name, current_score):
+    """Get specific suggestions based on capability and lens"""
+    
+    suggestions = {
+        'data_ingestion': {
+            'knowledge': [
+                "Implement data governance and quality standards",
+                "Establish data lineage and documentation processes",
+                "Develop data validation and monitoring capabilities"
+            ],
+            'process': [
+                "Standardize data ingestion workflows",
+                "Implement automated data quality checks",
+                "Establish data ownership and responsibility"
+            ]
+        },
+        'allocation': {
+            'knowledge': [
+                "Develop comprehensive tagging strategies",
+                "Establish cost allocation methodologies",
+                "Implement chargeback and showback processes"
+            ],
+            'process': [
+                "Standardize allocation rules and policies",
+                "Implement automated allocation processes",
+                "Establish allocation review and approval workflows"
+            ]
+        }
+        # Add more capabilities as needed
+    }
+    
+    capability_suggestions = suggestions.get(capability_name, {}).get(lens_name, [])
+    
+    # Filter suggestions based on current score
+    if current_score < 2:
+        return capability_suggestions[:2]  # Focus on basics
+    elif current_score < 3:
+        return capability_suggestions[:3]  # Add intermediate suggestions
+    else:
+        return capability_suggestions  # All suggestions for advanced levels
+
+def get_industry_comparison(score, capability_name, lens_name):
+    """Get industry comparison based on score and capability"""
+    
+    if score <= 1:
+        return f"Below average for {capability_name} {lens_name} - 30% of organizations are at this level"
+    elif score <= 2:
+        return f"Average for {capability_name} {lens_name} - 55% of organizations are at this level"
+    elif score <= 3:
+        return f"Above average for {capability_name} {lens_name} - 15% of organizations reach this level"
+    else:
+        return f"Leading edge for {capability_name} {lens_name} - Top 5% of organizations achieve this level"
+
+def get_risks(score, capability_name, lens_name):
+    """Get potential risks based on current maturity level"""
+    
+    if score <= 1:
+        return f"High risk of cost overruns and inefficiencies in {capability_name} {lens_name}. Lack of visibility and control may lead to significant financial impact."
+    elif score <= 2:
+        return f"Moderate risk in {capability_name} {lens_name}. Inconsistent processes may lead to missed optimization opportunities and increased costs."
+    elif score <= 3:
+        return f"Low risk in {capability_name} {lens_name}. Well-established processes provide good control and optimization capabilities."
+    else:
+        return f"Minimal risk in {capability_name} {lens_name}. Advanced capabilities provide excellent control and optimization."
 
 def generate_recommendations(assessment_id, scope_id, domain, overall_percentage, lens_scores):
-    """Generate personalized recommendations using OpenAI API"""
+    """Generate concise, actionable recommendations using OpenAI API, based on lowest scores from Results Matrix."""
     try:
         # Get all responses for this assessment
         conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
         cursor.execute('''
-            SELECT capability_id, lens_id, answer, score
+            SELECT capability_id, lens_id, answer, score, improvement_suggestions, evidence_files
             FROM responses 
             WHERE assessment_id = ?
             ORDER BY capability_id, lens_id
@@ -486,246 +1163,145 @@ def generate_recommendations(assessment_id, scope_id, domain, overall_percentage
         responses = cursor.fetchall()
         conn.close()
         
-        # Prepare assessment data for OpenAI
+        # Build results matrix to find lowest scores
+        results_matrix = {}
+        lowest_scores = []
+        
+        for capability_id, lens_id, answer, score, improvement, evidence_files in responses:
+            if not capability_id or not lens_id:
+                continue
+            if capability_id not in results_matrix:
+                results_matrix[capability_id] = {}
+            
+            score_value = score or 0
+            results_matrix[capability_id][lens_id] = {
+                'score': score_value,
+                'answer': answer,
+                'improvement': improvement or 'No suggestions available'
+            }
+            
+            # Get capability and lens names
+            capability_name = next((c['name'] for c in CAPABILITIES if c['id'] == capability_id), capability_id)
+            lens_name = next((l['name'] for l in LENSES if l['id'] == lens_id), lens_id)
+            
+            # Add to lowest scores list for sorting
+            lowest_scores.append({
+                'capability_id': capability_id,
+                'capability_name': capability_name,
+                'lens_id': lens_id,
+                'lens_name': lens_name,
+                'score': score_value,
+                'answer': answer,
+                'improvement': improvement or 'No suggestions available'
+            })
+        
+        # Sort by score (ascending) to get lowest scores first
+        lowest_scores.sort(key=lambda x: x['score'])
+        
+        # Take up to 5 lowest scores for recommendations
+        target_recommendations = lowest_scores[:5]
+        
+        # Prepare summary for OpenAI
         assessment_summary = f"""
         Assessment Summary:
         - Scope: {next((s['name'] for s in SCOPES if s['id'] == scope_id), scope_id)}
-        - Domain: {domain if domain else 'Complete Assessment'}
         - Overall Score: {overall_percentage}%
-        
-        Lens Scores:
+        - Domain: {domain}
         """
         
-        for lens_id, data in lens_scores.items():
-            lens_name = next((l['name'] for l in LENSES if l['id'] == lens_id), lens_id)
-            assessment_summary += f"- {lens_name}: {data['percentage']}% (Weight: {data['weight']}%)\n"
+        # Prepare lowest scores context for OpenAI
+        lowest_scores_context = "\nLowest Scoring Areas (Focus for Recommendations):\n"
+        for item in target_recommendations:
+            lowest_scores_context += f"- {item['capability_name']} ({item['lens_name']}): Score {item['score']}/4\n"
+            lowest_scores_context += f"  Answer: {item['answer'][:150]}{'...' if len(item['answer']) > 150 else ''}\n"
+            lowest_scores_context += f"  Current Improvement: {item['improvement'][:150]}{'...' if len(item['improvement']) > 150 else ''}\n\n"
         
-        # Prepare detailed responses
-        detailed_responses = "\nDetailed Responses:\n"
-        for response in responses:
-            capability_id, lens_id, answer, score = response
-            capability_name = next((c['name'] for c in CAPABILITIES if c['id'] == capability_id), capability_id)
-            lens_name = next((l['name'] for l in LENSES if l['id'] == lens_id), lens_id)
-            detailed_responses += f"\n{capability_name} - {lens_name} (Score: {score}/4):\n{answer}\n"
-        
-        # Create OpenAI prompt
+        # Updated prompt to focus on lowest scores with new structure
         prompt = f"""
-        You are a FinOps expert consultant. Based on the following assessment data, provide highly specific and actionable recommendations tailored to this organization's current state.
+        You are a FinOps expert. Based on the user's lowest scoring areas below, provide exactly {len(target_recommendations)} concise, actionable recommendations for FinOps maturity improvement. Focus on the areas with the lowest scores.
+
+        CRITICAL: You must output ONLY the recommendations in this EXACT format, with NO extra text, headers, or explanations:
+
+        Title: [Title of Recommendation]
+        Description: [Brief description of the recommendation]
+        Why it is important: [Explanation of why this matters for FinOps maturity]
+        Recommendation: [Specific actionable steps to implement]
+
+        Title: [Title of Recommendation]
+        Description: [Brief description of the recommendation]
+        Why it is important: [Explanation of why this matters for FinOps maturity]
+        Recommendation: [Specific actionable steps to implement]
+
+        Continue this format for all {len(target_recommendations)} recommendations. Do NOT include any introduction, summary, section headers, or extra text. Do NOT number the recommendations. Do NOT use any other labels or formatting.
 
         {assessment_summary}
-        
-        {detailed_responses}
-        
-        IMPORTANT:
-        - For every 'Real Example' or 'Success Story', you MUST search for and include a real, working link to an article, case study, or blog post from the internet (Medium, company blogs, cloud providers, news portals, etc). NEVER use links from finops.org or any FinOps Foundation domain in Real Example/Success Story. Do NOT use placeholder/fake links.
-        - All links must be in markdown format: [text](url)
-        - All documentation links must be in markdown format: [text](url)
-        - All links must be clickable in the rendered output.
-        
-        Please provide recommendations in this EXACT format:
-        
-        ## 🚀 Immediate Actions (Next 30 days)
-        
-        ### Quick Wins
-        - [Specific action based on user's responses]
-          - **Why this matters:** [Brief explanation]
-          - **Documentation:** [Link to relevant documentation]
-          - **Real Example:** [Brief anonymized case study with a real link from Medium, company blog, or news portal. NEVER use finops.org.]
-        
-        ### Foundation Building
-        - [Another specific action]
-          - **Why this matters:** [Brief explanation]
-          - **Documentation:** [Link to relevant documentation]
-          - **Real Example:** [Brief anonymized case study with a real link from Medium, company blog, or news portal. NEVER use finops.org.]
-        
-        ## 📈 Short-term Improvements (3-6 months)
-        
-        ### Process Enhancements
-        - [Specific process improvement based on user's responses]
-          - **Implementation Steps:** [Step-by-step guide]
-          - **Documentation:** [Link to relevant documentation]
-          - **Success Metrics:** [How to measure progress]
-        
-        ### Tool Implementation
-        - [Specific tool recommendation]
-          - **Why this tool:** [Explanation based on user's current state]
-          - **Documentation:** [Link to tool documentation]
-          - **Integration Guide:** [Link to integration best practices]
-        
-        ## 🎯 Priority Focus Areas
-        
-        Based on your assessment scores, focus on these 3 critical areas:
-        
-        1. **[Area 1]** - Score: [X]%
-           - **Why Critical:** [Explanation based on user's responses]
-           - **Documentation:** [Link to relevant documentation]
-           - **Success Story:** [Brief anonymized case study with a real link from Medium, company blog, or news portal. NEVER use finops.org.]
-        
-        2. **[Area 2]** - Score: [X]%
-           - **Why Critical:** [Explanation based on user's responses]
-           - **Documentation:** [Link to relevant documentation]
-           - **Success Story:** [Brief anonymized case study with a real link from Medium, company blog, or news portal. NEVER use finops.org.]
-        
-        3. **[Area 3]** - Score: [X]%
-           - **Why Critical:** [Explanation based on user's responses]
-           - **Documentation:** [Link to relevant documentation]
-           - **Success Story:** [Brief anonymized case study with a real link from Medium, company blog, or news portal. NEVER use finops.org.]
-        
-        ## 📚 Best Practices by Lens
-        
-        ### Knowledge (Current: {lens_scores.get('knowledge', {}).get('percentage', 0)}%)
-        - [Specific knowledge gap identified from responses]
-          - **Learning Resources:** [Link to FinOps Foundation training]
-          - **Documentation:** [Link to relevant documentation]
-        
-        ### Process (Current: {lens_scores.get('process', {}).get('percentage', 0)}%)
-        - [Specific process improvement]
-          - **Process Guide:** [Link to process documentation]
-          - **Templates:** [Link to process templates if available]
-        
-        ### Metrics (Current: {lens_scores.get('metrics', {}).get('percentage', 0)}%)
-        - [Specific metrics recommendation]
-          - **Metrics Guide:** [Link to metrics documentation]
-          - **Dashboard Templates:** [Link to dashboard examples]
-        
-        ### Adoption (Current: {lens_scores.get('adoption', {}).get('percentage', 0)}%)
-        - [Specific adoption strategy]
-          - **Change Management:** [Link to adoption best practices]
-          - **Training Resources:** [Link to training materials]
-        
-        ### Automation (Current: {lens_scores.get('automation', {}).get('percentage', 0)}%)
-        - [Specific automation opportunity]
-          - **Automation Guide:** [Link to automation documentation]
-          - **Code Examples:** [Link to implementation examples]
-        
-        ## 🔗 Key Resources
-        
-        - [FinOps Foundation](https://www.finops.org/)
-        - [Best Practices](https://www.finops.org/framework/)
-        - [Training](https://www.finops.org/certification/)
-        
-        Make each recommendation highly specific to the user's responses and current state. Include actual links to documentation, not placeholder text. All links must be in markdown format and clickable.
+        {lowest_scores_context}
         """
         
         # Call OpenAI API
-        openai.api_key = os.getenv('OPENAI_API_KEY')
-        openai.api_base = os.getenv('OPENAI_API_BASE', 'https://api.openai.com/v1')
-        
         try:
-            response = openai.ChatCompletion.create(
+            client = get_openai_client()
+            response = client.chat.completions.create(
                 model="gpt-4",
                 messages=[
-                    {"role": "system", "content": "You are a FinOps expert consultant with deep knowledge of the FinOps Foundation framework and real-world implementation experience."},
+                    {"role": "system", "content": f"You are a FinOps expert. You must output EXACTLY {len(target_recommendations)} recommendations in the specified format. Each recommendation must have: Title:, Description:, Why it is important:, and Recommendation:. Do NOT include any extra text, headers, explanations, or numbering. Only output the required fields in the exact order. Focus on the lowest scoring areas."},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=2000,
-                temperature=0.7
+                max_tokens=1000,
+                temperature=0.5
             )
-            
             recommendations = response.choices[0].message.content
+            if recommendations is None:
+                recommendations = ''
+            
+            # Clean up the recommendations to ensure proper formatting
+            import re
+            
+            # Remove any extra text at the beginning or end
+            recommendations = re.sub(r'^(Executive Summary|Introduction|Conclusion|Summary|Here are|Based on|I\'ll provide).*?\n', '', recommendations, flags=re.DOTALL | re.IGNORECASE)
+            recommendations = re.sub(r'\n\n+', '\n\n', recommendations)
+            recommendations = recommendations.strip()
+            
+            # Ensure we have the proper structure
+            if not re.search(r'Description:', recommendations):
+                # If the AI didn't follow the format, create a fallback structure
+                lines = recommendations.split('\n')
+                formatted_recommendations = []
+                current_recommendation = []
+                
+                for line in lines:
+                    line = line.strip()
+                    if line and not line.startswith('Description:') and not line.startswith('Why it is important:') and not line.startswith('Recommendation:'):
+                        if current_recommendation:
+                            formatted_recommendations.append('\n'.join(current_recommendation))
+                            current_recommendation = []
+                        current_recommendation.append(line)
+                        current_recommendation.append('Description: Brief description of this recommendation')
+                        current_recommendation.append('Why it is important: This will help improve your FinOps maturity')
+                        current_recommendation.append('Recommendation: Implement specific steps to address this area')
+                
+                if current_recommendation:
+                    formatted_recommendations.append('\n'.join(current_recommendation))
+                
+                recommendations = '\n\n'.join(formatted_recommendations)
+                
         except Exception as e:
             print(f"OpenAI API error: {e}")
-            # Fallback to a comprehensive recommendation with new format
-            recommendations = f"""
-            ## 🚀 Immediate Actions (Next 30 days)
-            
-            ### Quick Wins
-            - **Implement Cost Allocation Tags**
-              - **Why this matters:** Based on your current score of {overall_percentage}%, establishing proper cost allocation is critical for understanding cloud spend
-              - **Documentation:** https://www.finops.org/framework/capabilities/cost-allocation/
-              - **Real Example:** A mid-size tech company reduced cloud costs by 25% after implementing proper tagging within 30 days
-            
-            - **Set Up Basic Cost Monitoring**
-              - **Why this matters:** Your current monitoring score indicates room for improvement in cost visibility
-              - **Documentation:** https://www.finops.org/framework/capabilities/data-analysis-showback/
-              - **Real Example:** A SaaS company achieved 40% cost savings by implementing daily cost monitoring alerts
-            
-            ### Foundation Building
-            - **Start FinOps Training Program**
-              - **Why this matters:** Knowledge gaps identified in your assessment need immediate attention
-              - **Documentation:** https://www.finops.org/certification/
-              - **Real Example:** A financial services company improved FinOps adoption by 60% after implementing structured training
-            
-            ## 📈 Short-term Improvements (3-6 months)
-            
-            ### Process Enhancements
-            - **Implement Cost Anomaly Detection**
-              - **Implementation Steps:** Set up automated alerts for unusual spending patterns
-              - **Documentation:** https://www.finops.org/framework/capabilities/managing-anomalies/
-              - **Success Metrics:** Reduce cost overruns by 50% within 6 months
-            
-            ### Tool Implementation
-            - **Deploy FinOps Dashboard**
-              - **Why this tool:** Your current metrics score suggests need for better visualization
-              - **Documentation:** https://www.finops.org/framework/capabilities/data-analysis-showback/
-              - **Integration Guide:** https://www.finops.org/framework/capabilities/
-            
-            ## 🎯 Priority Focus Areas
-            
-            Based on your assessment scores, focus on these 3 critical areas:
-            
-            1. **Cost Allocation** - Score: {lens_scores.get('knowledge', {}).get('percentage', 0)}%
-               - **Why Critical:** Your responses indicate basic cost allocation understanding, but implementation needs improvement
-               - **Documentation:** https://www.finops.org/framework/capabilities/cost-allocation/
-               - **Success Story:** A retail company achieved 30% cost reduction by implementing proper cost allocation
-            
-            2. **Data Analysis & Showback** - Score: {lens_scores.get('process', {}).get('percentage', 0)}%
-               - **Why Critical:** Your process scores suggest need for better data-driven decision making
-               - **Documentation:** https://www.finops.org/framework/capabilities/data-analysis-showback/
-               - **Success Story:** A healthcare company improved cost transparency by 80% through showback implementation
-            
-            3. **Anomaly Management** - Score: {lens_scores.get('metrics', {}).get('percentage', 0)}%
-               - **Why Critical:** Your metrics indicate reactive rather than proactive cost management
-               - **Documentation:** https://www.finops.org/framework/capabilities/managing-anomalies/
-               - **Success Story:** A manufacturing company prevented $500K in cost overruns through anomaly detection
-            
-            ## 📚 Best Practices by Lens
-            
-            ### Knowledge (Current: {lens_scores.get('knowledge', {}).get('percentage', 0)}%)
-            - **FinOps Foundation Training**
-              - **Learning Resources:** https://www.finops.org/certification/
-              - **Documentation:** https://www.finops.org/framework/
-            
-            ### Process (Current: {lens_scores.get('process', {}).get('percentage', 0)}%)
-            - **Standardize Cost Review Process**
-              - **Process Guide:** https://www.finops.org/framework/capabilities/
-              - **Templates:** https://www.finops.org/framework/
-            
-            ### Metrics (Current: {lens_scores.get('metrics', {}).get('percentage', 0)}%)
-            - **Implement Cost KPIs Dashboard**
-              - **Metrics Guide:** https://www.finops.org/framework/capabilities/data-analysis-showback/
-              - **Dashboard Templates:** https://www.finops.org/framework/
-            
-            ### Adoption (Current: {lens_scores.get('adoption', {}).get('percentage', 0)}%)
-            - **Change Management Strategy**
-              - **Change Management:** https://www.finops.org/framework/capabilities/
-              - **Training Resources:** https://www.finops.org/certification/
-            
-            ### Automation (Current: {lens_scores.get('automation', {}).get('percentage', 0)}%)
-            - **Automate Cost Optimization**
-              - **Automation Guide:** https://www.finops.org/framework/capabilities/
-              - **Code Examples:** https://www.finops.org/framework/
-            
-            ## 🔗 Key Resources
-            
-            - **FinOps Foundation:** https://www.finops.org/
-            - **Best Practices:** https://www.finops.org/framework/
-            - **Training:** https://www.finops.org/certification/
-            """
+            recommendations = "Unable to generate recommendations at this time. Please try again later."
         
-        # Store recommendations in database
-        conn = sqlite3.connect(DATABASE)
-        cursor = conn.cursor()
-        cursor.execute('''
-            UPDATE assessments 
-            SET recommendations = ?
-            WHERE id = ?
-        ''', (recommendations, assessment_id))
-        conn.commit()
-        conn.close()
+        # Store recommendations in database ONLY if successful
+        if recommendations and "Unable to generate recommendations" not in recommendations:
+            conn = sqlite3.connect(DATABASE)
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE assessments 
+                SET recommendations = ?
+                WHERE id = ?
+            ''', (recommendations, assessment_id))
+            conn.commit()
+            conn.close()
         
         return recommendations
-        
     except Exception as e:
         print(f"Error generating recommendations: {e}")
         return "Unable to generate recommendations at this time. Please try again later."
@@ -766,7 +1342,7 @@ def register():
         token = serializer.dumps({'email': email, 'domain': domain})
         if send_confirmation_email(email, token):
             return jsonify({
-                "status": "success",
+                "status": "success", 
                 "message": "Registration successful! Please check your email to confirm your account, then use the login tab to request a magic link."
             })
         else:
@@ -895,11 +1471,8 @@ def start_assessment():
         return jsonify({"status": "error", "message": "Please log in first"})
     
     try:
-        scope_id = request.form.get('scope_id')
         domain = request.form.get('domain', '')  # Empty string for complete assessment
-        
-        if not scope_id:
-            return jsonify({"status": "error", "message": "Scope is required"})
+        scope_id = request.form.get('scope_id', 'public_cloud')  # Default to public cloud
         
         # Create new assessment
         conn = sqlite3.connect(DATABASE)
@@ -926,6 +1499,7 @@ def start_assessment():
 
 @app.route('/assessment')
 def assessment():
+    print(f"Assessment route called. Session: {session}")
     if 'user_id' not in session:
         return redirect('/')
     
@@ -936,6 +1510,7 @@ def assessment():
 
 @app.route('/get_assessment_progress')
 def get_assessment_progress():
+    print(f"get_assessment_progress called. Session: {session}")
     if 'user_id' not in session:
         return jsonify({"status": "error", "message": "Please log in first"})
     
@@ -958,13 +1533,15 @@ def get_assessment_progress():
         for capability in capabilities:
             for lens in LENSES:
                 question_text = generate_question(capability['id'], lens['id'], scope_id)
+                answer_options = get_answer_options(question_text)
                 questions.append({
                     'capability_id': capability['id'],
                     'capability_name': capability['name'],
                     'lens_id': lens['id'],
                     'lens_name': lens['name'],
                     'domain': capability['domain'],
-                    'question': question_text
+                    'question': question_text,
+                    'answer_options': answer_options
                 })
         
         # Get existing responses
@@ -1007,166 +1584,19 @@ def submit_assessment():
         assessment_id = session['current_assessment_id']
         capability_id = request.form.get('capability_id')
         lens_id = request.form.get('lens_id')
-        answer = request.form.get('answer', '').strip()
+        answer_level = request.form.get('answer_level', '').strip()
+        answer_details = request.form.get('answer_details', '').strip()
         
-        if not all([capability_id, lens_id, answer]):
-            return jsonify({"status": "error", "message": "All fields are required"})
+        if not all([capability_id, lens_id, answer_level]):
+            return jsonify({"status": "error", "message": "Capability, lens, and maturity level are required"})
+        # answer_details is now optional
         
-        # Handle file uploads
-        evidence_analysis = []
-        uploaded_files = []
+        # Combine level and details for storage
+        answer = f"Level: {answer_level}\nDetails: {answer_details}"
         
-        if 'evidence' in request.files:
-            files = request.files.getlist('evidence')
-            for file in files:
-                if file and file.filename:
-                    # Create temporary file for processing
-                    filename = secure_filename(file.filename)
-                    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                    file.save(filepath)
-                    uploaded_files.append(filepath)
-        
-        # Get AI analysis
-        try:
-            scope_name = next((s['name'] for s in SCOPES if s['id'] == session['current_scope']), session['current_scope'])
-            capability_name = next((c['name'] for c in CAPABILITIES if c['id'] == capability_id), capability_id)
-            lens_name = next((l['name'] for l in LENSES if l['id'] == lens_id), lens_id)
-            
-            # Use OpenAI or XAI for analysis
-            api_key = os.getenv('OPENAI_API_KEY') or os.getenv('XAI_API_KEY')
-            if api_key:
-                if os.getenv('XAI_API_KEY'):
-                    openai.api_base = "https://api.x.ai/v1"
-                
-                openai.api_key = api_key
-                
-                # Include file analysis in the prompt if available
-                file_context = ""
-                if evidence_analysis:
-                    file_context = "\n\nEvidence Analysis:\n"
-                    for evidence in evidence_analysis:
-                        file_context += f"\nFile: {evidence['filename']}\n{evidence['analysis']}\n"
-                
-                prompt = f"""
-                Analyze this FinOps assessment response and provide a score from 0-4 and improvement suggestions.
-                
-                Scope: {scope_name}
-                Capability: {capability_name}
-                Lens: {lens_name}
-                
-                Response: {answer}{file_context}
-                
-                Scoring criteria:
-                0 = No capability or awareness
-                1 = Basic awareness, ad-hoc activities
-                2 = Some processes in place, inconsistent execution
-                3 = Well-defined processes, consistent execution
-                4 = Optimized, automated, continuous improvement
-                
-                Provide your response in this exact format:
-                SCORE: [0-4]
-                IMPROVEMENT: [specific actionable suggestions]
-                """
-                
-                response = openai.ChatCompletion.create(
-                    model="gpt-3.5-turbo",
-                    messages=[{"role": "user", "content": prompt}],
-                    max_tokens=500,
-                    temperature=0.3
-                )
-                
-                ai_response = response.choices[0].message.content
-                
-                # Parse AI response
-                score = 2  # Default score
-                improvement = "Continue developing this capability with structured processes and regular reviews."
-                
-                if "SCORE:" in ai_response:
-                    try:
-                        score_line = [line for line in ai_response.split('\n') if 'SCORE:' in line][0]
-                        score = int(score_line.split(':')[1].strip())
-                    except:
-                        pass
-                
-                if "IMPROVEMENT:" in ai_response:
-                    try:
-                        improvement_lines = ai_response.split('IMPROVEMENT:')[1].strip()
-                        improvement = improvement_lines
-                    except:
-                        pass
-            else:
-                score = 2
-                improvement = "AI analysis not available. Please configure API key for detailed feedback."
-                
-        except Exception as e:
-            print(f"AI analysis error: {e}")
-            score = 2
-            improvement = "Analysis temporarily unavailable. Your response has been saved."
-        
-        # Process uploaded files with ChatGPT if available
-        if uploaded_files and (os.getenv('OPENAI_API_KEY') or os.getenv('XAI_API_KEY')):
-            scope_name = next((s['name'] for s in SCOPES if s['id'] == session['current_scope']), session['current_scope'])
-            capability_name = next((c['name'] for c in CAPABILITIES if c['id'] == capability_id), capability_id)
-            lens_name = next((l['name'] for l in LENSES if l['id'] == lens_id), lens_id)
-            
-            api_key = os.getenv('OPENAI_API_KEY') or os.getenv('XAI_API_KEY')
-            if os.getenv('XAI_API_KEY'):
-                openai.api_base = "https://api.x.ai/v1"
-            
-            openai.api_key = api_key
-            
-            for filepath in uploaded_files:
-                try:
-                    filename = os.path.basename(filepath)
-                    
-                    # Read file content
-                    with open(filepath, 'r', encoding='utf-8') as f:
-                        file_content = f.read()
-                    
-                    file_prompt = f"""
-                    Analyze this uploaded evidence file for FinOps assessment:
-                    
-                    File: {filename}
-                    Scope: {scope_name}
-                    Capability: {capability_name}
-                    Lens: {lens_name}
-                    
-                    File Content:
-                    {file_content[:2000]}  # Limit content for API
-                    
-                    Provide a brief analysis of this evidence in relation to the FinOps capability:
-                    - What does this evidence show about the organization's FinOps maturity?
-                    - What specific insights can be drawn from this evidence?
-                    - How does this evidence support or contradict the user's text response?
-                    
-                    Keep the analysis concise and focused on FinOps relevance.
-                    """
-                    
-                    file_response = openai.ChatCompletion.create(
-                        model="gpt-3.5-turbo",
-                        messages=[{"role": "user", "content": file_prompt}],
-                        max_tokens=300,
-                        temperature=0.3
-                    )
-                    
-                    file_analysis = file_response.choices[0].message.content
-                    evidence_analysis.append({
-                        'filename': filename,
-                        'analysis': file_analysis
-                    })
-                    
-                except Exception as e:
-                    print(f"File analysis error for {filepath}: {e}")
-                    evidence_analysis.append({
-                        'filename': os.path.basename(filepath),
-                        'analysis': 'File could not be analyzed due to processing error.'
-                    })
-                
-                # Delete the file immediately after processing
-                try:
-                    os.remove(filepath)
-                except Exception as e:
-                    print(f"Error deleting file {filepath}: {e}")
+                # Default score - will be processed with AI later
+        score = 2
+        improvement = "Will be analyzed when assessment is completed"
         
         # Save response to database
         conn = sqlite3.connect(DATABASE)
@@ -1184,15 +1614,15 @@ def submit_assessment():
             # Update existing response
             cursor.execute('''
                 UPDATE responses 
-                SET answer = ?, score = ?, improvement_suggestions = ?, evidence_files = ?
+                SET answer = ?, score = ?, improvement_suggestions = ?
                 WHERE id = ?
-            ''', (answer, score, improvement, json.dumps(evidence_analysis), existing[0]))
+            ''', (answer, score, improvement, existing[0]))
         else:
             # Insert new response
             cursor.execute('''
-                INSERT INTO responses (assessment_id, capability_id, lens_id, answer, score, improvement_suggestions, evidence_files)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', (assessment_id, capability_id, lens_id, answer, score, improvement, json.dumps(evidence_analysis)))
+                INSERT INTO responses (assessment_id, capability_id, lens_id, answer, score, improvement_suggestions)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (assessment_id, capability_id, lens_id, answer, score, improvement))
         
         # Update assessment timestamp
         cursor.execute('''
@@ -1204,7 +1634,10 @@ def submit_assessment():
         conn.commit()
         conn.close()
         
-        return jsonify({"status": "success", "score": score, "improvement": improvement})
+        return jsonify({
+            "status": "success",
+            "message": "Response saved successfully"
+        })
         
     except Exception as e:
         print(f"Submit assessment error: {e}")
@@ -1258,6 +1691,59 @@ def complete_assessment():
         assessment_details = cursor.fetchone()
         scope_id = assessment_details[0]
         domain = assessment_details[1]
+        
+        # Process all responses with AI analysis
+        cursor.execute('''
+            SELECT capability_id, lens_id, answer, id
+            FROM responses 
+            WHERE assessment_id = ?
+        ''', (assessment_id,))
+        responses = cursor.fetchall()
+        
+        scope_name = next((s['name'] for s in SCOPES if s['id'] == scope_id), scope_id)
+        
+        # Process each response with AI
+        for capability_id, lens_id, answer, response_id in responses:
+            try:
+                capability_name = next((c['name'] for c in CAPABILITIES if c['id'] == capability_id), capability_id)
+                lens_name = next((l['name'] for l in LENSES if l['id'] == lens_id), lens_id)
+                
+                # Parse answer to get level and details
+                answer_lines = answer.split('\n')
+                answer_level = ""
+                answer_details = ""
+                
+                for line in answer_lines:
+                    if line.startswith('Level: '):
+                        answer_level = line.replace('Level: ', '').strip()
+                    elif line.startswith('Details: '):
+                        answer_details = line.replace('Details: ', '').strip()
+                
+                # Use the FinOps maturity evaluation function
+                evaluation_result = evaluate_finops_maturity(capability_name, lens_name, answer_level, answer_details, scope_name)
+                
+                score = evaluation_result['score']
+                improvement = "\n".join(evaluation_result['improvement_suggestions'])
+                
+                # Update the response with AI analysis
+                cursor.execute('''
+                    UPDATE responses 
+                    SET score = ?, improvement_suggestions = ?
+                    WHERE id = ?
+                ''', (score, improvement, response_id))
+                
+            except Exception as e:
+                print(f"AI processing error for response {response_id}: {e}")
+                # Keep default score if AI processing fails
+                continue
+        
+        # Recalculate overall percentage after AI processing
+        cursor.execute('SELECT score FROM responses WHERE assessment_id = ?', (assessment_id,))
+        updated_responses = cursor.fetchall()
+        
+        total_score = sum(r[0] or 0 for r in updated_responses)
+        total_possible = len(updated_responses) * 4
+        overall_percentage = round((total_score / total_possible) * 100) if total_possible > 0 else 0
         
         # Generate recommendations using OpenAI
         recommendations = generate_recommendations(assessment_id, scope_id, domain, overall_percentage, lens_scores)
@@ -1359,15 +1845,21 @@ def get_assessment_results(assessment_id):
                 print(f"Malformed response row: {r}")
                 return render_template('error.html', message="A response row is malformed."), 500
         
-        # Get benchmark data (other completed assessments with same scope)
+        # Get domain and user company hash for benchmark filtering
+        domain = assessment[3]
+        cursor.execute('SELECT company_hash FROM users WHERE id = ?', (session['user_id'],))
+        user_result = cursor.fetchone()
+        user_company_hash = user_result[0] if user_result else None
+        
+        # Get benchmark data (other completed assessments with same domain and different companies)
         cursor.execute('''
-            SELECT u.organization, a.id
+            SELECT u.company_hash, a.id
             FROM assessments a
             JOIN users u ON a.user_id = u.id
-            WHERE a.scope_id = ? AND a.status = 'completed' AND a.id != ?
+            WHERE a.domain = ? AND a.status = 'completed' AND a.id != ? AND u.company_hash != ?
             ORDER BY a.updated_at DESC
             LIMIT 10
-        ''', (scope_id, assessment_id))
+        ''', (domain, assessment_id, user_company_hash))
         benchmark_assessments = cursor.fetchall()
         print(f"[DEBUG] benchmark_assessments: {benchmark_assessments}")
         if benchmark_assessments is None:
@@ -1475,7 +1967,14 @@ def get_assessment_results(assessment_id):
         print(f"[DEBUG] Current recommendations: {recommendations}")
         print(f"[DEBUG] Assessment status: {assessment[4]}")
         
-        if not recommendations and assessment[4] == 'completed':  # Only generate for completed assessments
+        should_generate = (
+            assessment[4] == 'completed' and (
+                not recommendations or
+                "Unable to generate recommendations" in recommendations
+            )
+        )
+
+        if should_generate:
             print(f"[DEBUG] Generating recommendations for assessment {assessment_id}")
             try:
                 recommendations = generate_recommendations(assessment_id, scope_id, domain, overall_percentage, lens_scores)
@@ -1487,6 +1986,29 @@ def get_assessment_results(assessment_id):
             print(f"[DEBUG] Skipping recommendation generation - already exists or assessment not completed")
         
         print(f"[DEBUG] Final recommendations: {len(recommendations) if recommendations else 0} characters")
+        
+        def parse_recommendations(recommendations):
+            import re
+            blocks = re.split(r'(?:^|\n)Title:', recommendations)
+            parsed = []
+            for block in blocks:
+                block = block.strip()
+                if not block:
+                    continue
+                title_match = re.search(r'^(.*?)(?:\n|$)', block)
+                desc_match = re.search(r'Description:(.*?)(?:\n|$)', block, re.DOTALL)
+                why_match = re.search(r'Why (?:it matters|it is important):(.*?)(?:\n|$)', block, re.DOTALL)
+                rec_match = re.search(r'Recommendation:(.*)', block, re.DOTALL)
+                # Only add if all fields are present
+                if title_match and desc_match and why_match and rec_match:
+                    parsed.append({
+                        'title': title_match.group(1).strip(),
+                        'description': desc_match.group(1).strip(),
+                        'why': why_match.group(1).strip(),
+                        'recommendation': rec_match.group(1).strip(),
+                    })
+            return parsed
+        parsed_recommendations = parse_recommendations(recommendations) if recommendations else []
         
         return render_template('results.html',
                              assessment=assessment,
@@ -1501,7 +2023,9 @@ def get_assessment_results(assessment_id):
                              lens_scores=lens_scores,
                              user_score=user_score,
                              industry_avg=industry_avg,
-                             recommendations=recommendations)
+                             recommendations=recommendations,
+                             parsed_recommendations=parsed_recommendations,
+                             benchmark_data=benchmark_data)
         
     except Exception as e:
         print(f"Get assessment results error: {e}")
@@ -1548,21 +2072,25 @@ def export_pdf(assessment_id):
         ''', (assessment_id,))
         responses = cursor.fetchall()
         
-        # Get user information
-        cursor.execute('SELECT name, organization FROM users WHERE id = ?', (session['user_id'],))
+        # Get user information (privacy-focused - no personal data stored)
+        cursor.execute('SELECT company_hash FROM users WHERE id = ?', (session['user_id'],))
         user_info = cursor.fetchone()
-        user_name = decrypt_data(user_info[0]) if user_info else "Unknown User"
-        organization = decrypt_data(user_info[1]) if user_info else "Unknown Organization"
+        user_name = "Anonymous User"  # No personal data stored
+        organization = f"Company {chr(65 + (hash(user_info[0]) % 26))}" if user_info and user_info[0] else "Unknown Organization"
         
-        # Get benchmark data (other completed assessments with same scope)
+        # Get domain for benchmark filtering
+        domain = assessment[3]
+        user_company_hash = user_info[0] if user_info else None
+        
+        # Get benchmark data (other completed assessments with same domain and different companies)
         cursor.execute('''
-            SELECT u.organization, a.id
+            SELECT u.company_hash, a.id
             FROM assessments a
             JOIN users u ON a.user_id = u.id
-            WHERE a.scope_id = ? AND a.status = 'completed' AND a.id != ?
+            WHERE a.domain = ? AND a.status = 'completed' AND a.id != ? AND u.company_hash != ?
             ORDER BY a.updated_at DESC
             LIMIT 10
-        ''', (scope_id, assessment_id))
+        ''', (domain, assessment_id, user_company_hash))
         benchmark_assessments = cursor.fetchall()
         if benchmark_assessments is None:
             benchmark_assessments = []
@@ -1648,6 +2176,7 @@ def export_pdf(assessment_id):
                                      user_name=user_name,
                                      organization=organization,
                                      recommendations=recommendations,
+                                     parsed_recommendations=parsed_recommendations,
                                      benchmark_data=benchmark_data,
                                      user_score=user_score,
                                      industry_avg=industry_avg,
@@ -1759,6 +2288,12 @@ def markdown_filter(text):
     import textwrap
     text = textwrap.dedent(text)
     text = autolink(text)
+    # Fix [https://...](https://...) to just the URL as a clickable link
+    import re
+    def fix_url_links(md):
+        # Replace [https://...](https://...) with just the URL as a clickable link
+        return re.sub(r'\[https?://([^\]]+)\]\((https?://[^)]+)\)', r'\2', md)
+    text = fix_url_links(text)
     html = markdown.markdown(text, extensions=['extra', 'sane_lists', 'smarty'])
     # Pós-processar para adicionar target e rel em todos os links
     html = re.sub(r'<a (href="https?://[^"]+")', r'<a \1 target="_blank" rel="noopener noreferrer"', html)
@@ -1800,6 +2335,272 @@ def dashboard_stats():
 
 def hash_email(email):
     return hashlib.sha256(email.strip().lower().encode()).hexdigest()
+
+@app.route('/set_current_assessment/<int:assessment_id>')
+def set_current_assessment(assessment_id):
+    if 'user_id' not in session:
+        return redirect('/')
+    
+    try:
+        # Verify the assessment belongs to the current user
+        conn = sqlite3.connect(DATABASE)
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT scope_id, domain FROM assessments 
+            WHERE id = ? AND user_id = ?
+        ''', (assessment_id, session['user_id']))
+        assessment = cursor.fetchone()
+        conn.close()
+        
+        if not assessment:
+            return redirect('/dashboard')
+        
+        # Set current assessment in session
+        session['current_assessment_id'] = assessment_id
+        session['current_scope'] = assessment[0]
+        session['current_domain'] = assessment[1]
+        
+        return redirect('/assessment')
+        
+    except Exception as e:
+        print(f"Set current assessment error: {e}")
+        return redirect('/dashboard')
+
+@app.route('/test_openai')
+def test_openai():
+    try:
+        client = get_openai_client()
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": "Say hello!"}],
+            max_tokens=5,
+            temperature=0.1
+        )
+        test_message = response.choices[0].message.content
+        return jsonify({'status': 'success', 'message': test_message})
+    except Exception as e:
+        import traceback
+        return jsonify({'status': 'error', 'message': str(e), 'traceback': traceback.format_exc()}), 500
+
+@app.route('/reprocess_response/<int:assessment_id>/<capability_id>/<lens_id>')
+def reprocess_response(assessment_id, capability_id, lens_id):
+    """Reprocess an existing response with AI analysis"""
+    if 'user_id' not in session:
+        return jsonify({"status": "error", "message": "Please log in first"})
+    
+    try:
+        # Get the existing response
+        conn = sqlite3.connect(DATABASE)
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT answer, score, improvement_suggestions
+            FROM responses 
+            WHERE assessment_id = ? AND capability_id = ? AND lens_id = ?
+        ''', (assessment_id, capability_id, lens_id))
+        response = cursor.fetchone()
+        
+        if not response:
+            conn.close()
+            return jsonify({"status": "error", "message": "Response not found"})
+        
+        answer = response[0]
+        old_score = response[1]
+        old_improvement = response[2]
+        
+        # Get assessment and scope details
+        cursor.execute('SELECT scope_id, domain FROM assessments WHERE id = ?', (assessment_id,))
+        assessment = cursor.fetchone()
+        scope_id = assessment[0]
+        domain = assessment[1]
+        
+        conn.close()
+        
+        # Get names for context
+        scope_name = next((s['name'] for s in SCOPES if s['id'] == scope_id), scope_id)
+        capability_name = next((c['name'] for c in CAPABILITIES if c['id'] == capability_id), capability_id)
+        lens_name = next((l['name'] for l in LENSES if l['id'] == lens_id), lens_id)
+        
+        # Reprocess with AI
+        try:
+            api_key = os.getenv('OPENAI_API_KEY') or os.getenv('XAI_API_KEY')
+            if api_key:
+                if os.getenv('XAI_API_KEY'):
+                    client = openai.OpenAI(api_key=api_key, base_url="https://api.x.ai/v1")
+                else:
+                    client = get_openai_client()
+                
+                prompt = f"""
+                Analyze this FinOps assessment response and provide a score from 0-4 and improvement suggestions.
+                
+                Scope: {scope_name}
+                Capability: {capability_name}
+                Lens: {lens_name}
+                
+                Response: {answer}
+                
+                Scoring criteria:
+                0 = No capability or awareness
+                1 = Basic awareness, ad-hoc activities
+                2 = Some processes in place, inconsistent execution
+                3 = Well-defined processes, consistent execution
+                4 = Optimized, automated, continuous improvement
+                
+                Provide your response in this exact format:
+                SCORE: [0-4]
+                IMPROVEMENT: [specific actionable suggestions]
+                """
+                
+                response = client.chat.completions.create(
+                    model="gpt-3.5-turbo",
+                    messages=[{"role": "user", "content": prompt}],
+                    max_tokens=500,
+                    temperature=0.3
+                )
+                
+                ai_response = response.choices[0].message.content
+                
+                # Parse AI response
+                score = 2  # Default score
+                improvement = "Continue developing this capability with structured processes and regular reviews."
+                
+                if ai_response and "SCORE:" in ai_response:
+                    try:
+                        score_line = [line for line in ai_response.split('\n') if 'SCORE:' in line][0]
+                        score = int(score_line.split(':')[1].strip())
+                    except:
+                        pass
+                
+                if ai_response and "IMPROVEMENT:" in ai_response:
+                    try:
+                        improvement_lines = ai_response.split('IMPROVEMENT:')[1].strip()
+                        improvement = improvement_lines
+                    except:
+                        pass
+                
+                # Update the response in database
+                conn = sqlite3.connect(DATABASE)
+                cursor = conn.cursor()
+                cursor.execute('''
+                    UPDATE responses 
+                    SET score = ?, improvement_suggestions = ?
+                    WHERE assessment_id = ? AND capability_id = ? AND lens_id = ?
+                ''', (score, improvement, assessment_id, capability_id, lens_id))
+                conn.commit()
+                conn.close()
+                
+                return jsonify({
+                    "status": "success", 
+                    "message": "Response reprocessed successfully",
+                    "old_score": old_score,
+                    "new_score": score,
+                    "old_improvement": old_improvement,
+                    "new_improvement": improvement
+                })
+            else:
+                return jsonify({"status": "error", "message": "OpenAI API key not configured"})
+                
+        except Exception as e:
+            print(f"AI reprocessing error: {e}")
+            return jsonify({"status": "error", "message": f"AI analysis failed: {str(e)}"})
+        
+    except Exception as e:
+        print(f"Reprocess response error: {e}")
+        return jsonify({"status": "error", "message": "Failed to reprocess response"})
+
+@app.route('/my_responses')
+def my_responses():
+    """Show all responses for the current user with their IDs"""
+    if 'user_id' not in session:
+        return jsonify({"status": "error", "message": "Please log in first"})
+    
+    try:
+        conn = sqlite3.connect(DATABASE)
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT r.assessment_id, r.capability_id, r.lens_id, r.answer, r.score, r.improvement_suggestions
+            FROM responses r
+            JOIN assessments a ON r.assessment_id = a.id
+            WHERE a.user_id = ?
+            ORDER BY r.assessment_id, r.capability_id, r.lens_id
+        ''', (session['user_id'],))
+        responses = cursor.fetchall()
+        conn.close()
+        
+        result = []
+        for resp in responses:
+            assessment_id, capability_id, lens_id, answer, score, improvement = resp
+            
+            # Get names for display
+            capability_name = next((c['name'] for c in CAPABILITIES if c['id'] == capability_id), capability_id)
+            lens_name = next((l['name'] for l in LENSES if l['id'] == lens_id), lens_id)
+            
+            result.append({
+                'assessment_id': assessment_id,
+                'capability_id': capability_id,
+                'capability_name': capability_name,
+                'lens_id': lens_id,
+                'lens_name': lens_name,
+                'answer_preview': answer[:100] + '...' if len(answer) > 100 else answer,
+                'score': score,
+                'improvement_preview': improvement[:100] + '...' if improvement and len(improvement) > 100 else improvement,
+                'reprocess_url': f'/reprocess_response/{assessment_id}/{capability_id}/{lens_id}'
+            })
+        
+        return jsonify({
+            "status": "success",
+            "responses": result
+        })
+        
+    except Exception as e:
+        print(f"My responses error: {e}")
+        return jsonify({"status": "error", "message": "Failed to get responses"})
+
+@app.route('/company_benchmarks')
+def company_benchmarks():
+    if 'user_id' not in session:
+        return jsonify({'status': 'error', 'message': 'Not logged in'}), 401
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    # Get user's company hash
+    cursor.execute('SELECT company_hash FROM users WHERE id = ?', (session['user_id'],))
+    user_row = cursor.fetchone()
+    if not user_row:
+        conn.close()
+        return jsonify({'status': 'error', 'message': 'User not found'}), 404
+    company_hash = user_row[0]
+    # For each domain, get the latest assessment for this company
+    result = {'company': {}, 'industry': {}}
+    for domain in DOMAINS:
+        # Latest assessment for this company and domain
+        cursor.execute('''
+            SELECT a.overall_percentage, a.updated_at
+            FROM assessments a
+            JOIN users u ON a.user_id = u.id
+            WHERE u.company_hash = ? AND a.domain = ? AND a.status = 'completed'
+            ORDER BY a.updated_at DESC LIMIT 1
+        ''', (company_hash, domain))
+        row = cursor.fetchone()
+        if row:
+            result['company'][domain] = {'overall_percentage': row[0], 'updated_at': row[1]}
+        else:
+            result['company'][domain] = None
+        # Industry average for this domain (excluding this company)
+        cursor.execute('''
+            SELECT a.overall_percentage
+            FROM assessments a
+            JOIN users u ON a.user_id = u.id
+            WHERE u.company_hash != ? AND a.domain = ? AND a.status = 'completed'
+        ''', (company_hash, domain))
+        industry_scores = [r[0] for r in cursor.fetchall() if r[0] is not None]
+        if industry_scores:
+            avg = round(sum(industry_scores) / len(industry_scores), 1)
+            result['industry'][domain] = {'average': avg, 'count': len(industry_scores)}
+        else:
+            result['industry'][domain] = None
+    conn.close()
+    return jsonify({'status': 'success', 'data': result})
+
+
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5002)

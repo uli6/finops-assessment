@@ -179,11 +179,26 @@
         </table>
     </div>
 
-    {% if recommendations %}
-    <div class="recommendations-section">
-        <h2>🎯 AI-Powered Recommendations</h2>
-        <div class="recommendations-content">
-            {{ recommendations | markdown | safe }}
+    {% if parsed_recommendations %}
+    <div class="recommendations-section" style="margin-top: 40px;">
+        <h2 style="color: #667eea; margin-bottom: 20px;">🎯 AI-Powered Recommendations</h2>
+        <div class="recommendations-content" style="background: #f8f9fa; border-radius: 10px; padding: 2rem 2.5rem; font-size: 1.1rem; line-height: 1.7;">
+            <div style="max-width: 800px; margin: 0 auto;">
+                {% for rec in parsed_recommendations %}
+                <div class="recommendation-card" style="background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); padding: 1.2rem 1.5rem; margin-bottom: 2rem; border-left: 6px solid #667eea;">
+                    <div style="font-size: 1.1rem; font-weight: bold; margin-bottom: 0.5rem;">
+                        {{ rec.title }}
+                    </div>
+                    <div><b>Description:</b> {{ rec.description }}</div>
+                    <div style="margin-top: 0.5em;"><b>Why it matters:</b> {{ rec.why }}</div>
+                    <div style="margin-top: 0.5em;"><b>Recommendation:</b>
+                        <div style="margin-left:1em;">
+                            {{ rec.recommendation | markdown | safe }}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
         </div>
     </div>
     {% endif %}

@@ -154,4 +154,4 @@ def confirm_email(token):
 def logout():
     """Handle user logout"""
     session.clear()
-    return redirect(url_for('index')) 
+    return redirect(url_for('auth.index')) 

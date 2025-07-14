@@ -364,6 +364,8 @@ def get_assessment_results(assessment_id):
             return True
         return False
 
+    ai_error = False
+    ai_error_message = None
     if is_invalid_recommendations(recommendations):
         # Calculate overall percentage if needed
         total_score = sum(response[3] for response in responses) if responses else 0
@@ -371,12 +373,20 @@ def get_assessment_results(assessment_id):
         overall_pct = (total_score / total_questions) if total_questions > 0 else 0
         lens_scores = {f"{r[0]}_{r[1]}": r[3] for r in responses}
         from services.ai_service import generate_recommendations
-        recommendations = generate_recommendations(assessment_id, scope_id, domain, overall_pct, lens_scores)
-        # Save to DB
-        cursor.execute('''
-            UPDATE assessments SET recommendations = ? WHERE id = ?
-        ''', (recommendations, assessment_id))
-        conn.commit()
+        try:
+            new_recommendations = generate_recommendations(assessment_id, scope_id, domain, overall_pct, lens_scores)
+            if new_recommendations and 'Unable to generate recommendations' not in new_recommendations:
+                recommendations = new_recommendations
+                cursor.execute('''
+                    UPDATE assessments SET recommendations = ? WHERE id = ?
+                ''', (recommendations, assessment_id))
+                conn.commit()
+            else:
+                ai_error = True
+                ai_error_message = "AI recommendations are temporarily unavailable. We’ll try again next time you view this report."
+        except Exception as e:
+            ai_error = True
+            ai_error_message = "AI recommendations are temporarily unavailable due to a system error. We’ll try again next time you view this report."
 
     # Calculate domain-specific benchmarks
     if domain == 'Complete Assessment':
@@ -690,7 +700,9 @@ def get_assessment_results(assessment_id):
                          domain_benchmarks=domain_benchmarks,
                          domain_scores=domain_scores,
                          unique_questions_answered=unique_questions_answered,
-                         raw_average=raw_average)
+                         raw_average=raw_average,
+                         ai_error=ai_error,
+                         ai_error_message=ai_error_message)
 
 @assessment_bp.route('/set_current_assessment/<int:assessment_id>')
 def set_current_assessment(assessment_id):

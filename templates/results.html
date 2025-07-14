@@ -781,6 +781,15 @@
             </table>
         </div>
 
+        {% if ai_error %}
+        <div class="recommendations-section">
+            <h2 style="color: #667eea; margin-bottom: 20px;">🎯 AI-Powered Recommendations</h2>
+            <div class="recommendations-content" style="background: #fff3cd; color: #856404; border: 1px solid #ffeeba;">
+                <b>{{ ai_error_message }}</b>
+            </div>
+        </div>
+        {% endif %}
+
         {% if parsed_recommendations %}
         <div class="recommendations-section">
             <h2 style="color: #667eea; margin-bottom: 20px;">🎯 AI-Powered Recommendations</h2>

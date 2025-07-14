@@ -60,7 +60,7 @@ def dashboard():
     benchmark_data = {}
     for domain, avg_score, unique_companies in benchmarks:
         benchmark_data[domain] = {
-            'avg_score': round(avg_score, 1),
+            'avg_score': round(avg_score, 1) if avg_score is not None else None,
             'unique_companies': unique_companies,
             'maturity_label': get_maturity_label(avg_score)
         }

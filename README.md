@@ -2,6 +2,8 @@
 
 *If you find this project helpful, consider supporting it!*
 
+If you want to use the production version, access: [https://finopsassessment.duckdns.org/](https://finopsassessment.duckdns.org/)
+
 # FinOps Assessment Platform
 
 ## 🚀 AI-Powered, Privacy-First FinOps Maturity Assessment

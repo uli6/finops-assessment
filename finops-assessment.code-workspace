@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"name": "finops-assessment",
+			"path": "."
+		},
+		{
+			"name": "uploads",
+			"path": "uploads"
+		}
+	],
+	"settings": {}
+}

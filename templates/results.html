@@ -538,14 +538,15 @@
 </head>
 <body>
     <div class="container">
-        <!-- Processing Overlay -->
-        <div class="processing-overlay" id="processing-overlay" style="display: none;">
+        {% if ai_processing %}
+        <div class="processing-overlay" id="processing-overlay" style="display: flex;">
             <div class="processing-card">
                 <div class="processing-spinner"></div>
-                <div class="processing-text">Processing Your Assessment</div>
-                <div class="processing-subtext">Analyzing your answers with AI to create your personalized report...</div>
+                <div class="processing-text">Generating AI-Powered Recommendations</div>
+                <div class="processing-subtext">This may take a few moments as we analyze your answers with AI...</div>
             </div>
         </div>
+        {% endif %}
 
         <div class="header">
             <h1>📊 FinOps Assessment Results</h1>
@@ -596,8 +597,13 @@
             
             <div class="score-grid">
                 <div class="score-card">
-                    <h3>{{ overall_percentage | round(1) }}%</h3>
+                    <h3>{{ user_maturity_label }}</h3>
                     <p>Overall Maturity</p>
+                </div>
+                
+                <div class="score-card">
+                    <h3>{{ overall_percentage | round(1) }}%</h3>
+                    <p>Score Percentage</p>
                 </div>
                 
                 <div class="score-card">
@@ -634,13 +640,13 @@
                 <h3 style="color: #333; margin-bottom: 15px;">📊 Overall Performance</h3>
                 <div style="max-width: 500px; margin: 0 auto 30px auto;">
                     <div style="margin-bottom: 18px;">
-                        <strong>Industry Average:</strong> {{ industry_avg | round(1) }} <span style="font-size:0.9em;">(0–4)</span>
+                        <strong>Industry Average:</strong> {{ industry_maturity_label }} ({{ industry_avg | round(1) }})
                         <div style="background: #e0e0e0; border-radius: 6px; height: 22px; margin-top: 6px;">
                             <div style="background: #6c63ff; width: {{ (industry_avg / 4 * 100) }}%; height: 22px; border-radius: 6px;"></div>
                         </div>
                     </div>
                     <div>
-                        <strong>Your Organization:</strong> {{ user_score | round(1) }} <span style="font-size:0.9em;">(0–4)</span>
+                        <strong>Your Organization:</strong> {{ user_maturity_label }} ({{ user_score | round(1) }})
                         <div style="background: #e0e0e0; border-radius: 6px; height: 22px; margin-top: 6px;">
                             <div style="background: #00c896; width: {{ (user_score / 4 * 100) }}%; height: 22px; border-radius: 6px;"></div>
                         </div>
@@ -696,13 +702,13 @@
             <!-- Standard benchmark for domain-specific assessments -->
             <div style="max-width: 500px; margin: 0 auto 30px auto;">
                 <div style="margin-bottom: 18px;">
-                    <strong>Industry Average:</strong> {{ industry_avg | round(1) }} <span style="font-size:0.9em;">(0–4)</span>
+                    <strong>Industry Average:</strong> {{ industry_maturity_label }} ({{ industry_avg | round(1) }})
                     <div style="background: #e0e0e0; border-radius: 6px; height: 22px; margin-top: 6px;">
                         <div style="background: #6c63ff; width: {{ (industry_avg / 4 * 100) }}%; height: 22px; border-radius: 6px;"></div>
                     </div>
                 </div>
                 <div>
-                    <strong>Your Organization:</strong> {{ user_score | round(1) }} <span style="font-size:0.9em;">(0–4)</span>
+                    <strong>Your Organization:</strong> {{ user_maturity_label }} ({{ user_score | round(1) }})
                     <div style="background: #e0e0e0; border-radius: 6px; height: 22px; margin-top: 6px;">
                         <div style="background: #00c896; width: {{ (user_score / 4 * 100) }}%; height: 22px; border-radius: 6px;"></div>
                     </div>

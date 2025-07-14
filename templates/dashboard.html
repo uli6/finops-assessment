@@ -317,6 +317,7 @@
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 </head>
 <body>
     <div class="container">
@@ -535,6 +536,8 @@
                     const domains = data.domains;
                     const companyScores = data.company_scores;
                     const industryScores = data.industry_avgs;
+                    const companyLabels = data.company_labels;
+                    const industryLabels = data.industry_labels;
 
                     const ctx = document.getElementById('company-comparison-chart');
                     ctx.innerHTML = '<canvas id="comparison-chart"></canvas>';
@@ -548,13 +551,31 @@
                                     label: 'Your Company',
                                     data: companyScores.map(x => x === null ? null : x),
                                     backgroundColor: '#667eea',
-                                    borderRadius: 8
+                                    borderRadius: 8,
+                                    datalabels: {
+                                        anchor: 'end',
+                                        align: 'end',
+                                        color: '#667eea',
+                                        font: { weight: 'bold', size: 14 },
+                                        formatter: function(value, context) {
+                                            return companyLabels[context.dataIndex] || '';
+                                        }
+                                    }
                                 },
                                 {
                                     label: 'Industry Average',
                                     data: industryScores.map(x => x === null ? null : x),
                                     backgroundColor: '#aaa',
-                                    borderRadius: 8
+                                    borderRadius: 8,
+                                    datalabels: {
+                                        anchor: 'end',
+                                        align: 'end',
+                                        color: '#aaa',
+                                        font: { weight: 'bold', size: 14 },
+                                        formatter: function(value, context) {
+                                            return industryLabels[context.dataIndex] || '';
+                                        }
+                                    }
                                 }
                             ]
                         },
@@ -579,14 +600,21 @@
                                 },
                                 tooltip: {
                                     callbacks: {
+                                        title: function(context) {
+                                            return context[0].label;
+                                        },
                                         label: function(context) {
-                                            const value = context.parsed.y;
-                                            if (value === null || value === undefined) {
-                                                return context.dataset.label + ': N/A';
+                                            const idx = context.dataIndex;
+                                            if (context.dataset.label === 'Your Company') {
+                                                return 'Your Company: ' + (companyLabels[idx] || 'N/A');
+                                            } else {
+                                                return 'Industry: ' + (industryLabels[idx] || 'N/A');
                                             }
-                                            return context.dataset.label + ': ' + value.toFixed(1) + '%';
                                         }
                                     }
+                                },
+                                datalabels: {
+                                    display: true
                                 }
                             },
                             scales: {
@@ -600,7 +628,8 @@
                                     grid: { display: false }
                                 }
                             }
-                        }
+                        },
+                        plugins: [ChartDataLabels]
                     });
                 } else {
                     document.getElementById('company-comparison-chart').innerHTML = 

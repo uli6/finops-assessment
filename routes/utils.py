@@ -10,6 +10,17 @@ from config import DATABASE
 
 utils_bp = Blueprint('utils', __name__)
 
+def get_maturity_label(avg):
+    """Map average score to maturity label ('Crawl', 'Walk', 'Run')"""
+    if avg is None:
+        return 'N/A'
+    if avg < 1.5:
+        return 'Crawl'
+    elif avg < 3:
+        return 'Walk'
+    else:
+        return 'Run'
+
 @utils_bp.route('/test_openai')
 def test_openai():
     """Test OpenAI API connection"""
@@ -217,6 +228,7 @@ def export_pdf(assessment_id):
     total_score = sum(response[3] for response in responses) if responses else 0
     raw_average = (total_score / total_questions) if total_questions > 0 else 0
     
+    user_maturity_label = get_maturity_label(raw_average)
     # Calculate correct overall percentage
     correct_overall_percentage = (total_score / total_possible_points) * 100 if total_possible_points > 0 else 0
     
@@ -297,7 +309,9 @@ def export_pdf(assessment_id):
                                  domain_benchmarks=domain_benchmarks,
                                  domain_scores=domain_scores,
                                  unique_questions_answered=unique_questions_answered,
-                                 raw_average=raw_average)
+                                 raw_average=raw_average,
+                                 user_maturity_label=user_maturity_label
+                                 )
     try:
         from weasyprint import HTML
         pdf = HTML(string=html_content).write_pdf()

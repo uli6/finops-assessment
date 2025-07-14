@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, jsonify, session, redirec
 import sqlite3
 from models.database import get_db_connection
 from config import DATABASE
+from routes.utils import get_maturity_label
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -142,10 +143,32 @@ def company_benchmarks():
         avg_score = round(sum(domain_percentages) / len(domain_percentages), 1) if domain_percentages else None
         industry_scores.append(avg_score)
 
+    company_labels = []
+    for i, domain in enumerate(DOMAINS):
+        score = company_scores[i]
+        if score is not None:
+            avg_score = (score / 100) * 4  # Convert percent to 0-4 scale
+            label = get_maturity_label(avg_score)
+        else:
+            label = 'N/A'
+        company_labels.append(label)
+
+    industry_labels = []
+    for i, domain in enumerate(DOMAINS):
+        score = industry_scores[i]
+        if score is not None:
+            avg_score = (score / 100) * 4  # Convert percent to 0-4 scale
+            label = get_maturity_label(avg_score)
+        else:
+            label = 'N/A'
+        industry_labels.append(label)
+
     conn.close()
 
     return jsonify({
         'domains': DOMAINS,
         'company_scores': company_scores,
-        'industry_avgs': industry_scores
+        'industry_avgs': industry_scores,
+        'company_labels': company_labels,
+        'industry_labels': industry_labels
     }) 

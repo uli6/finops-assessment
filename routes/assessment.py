@@ -7,6 +7,7 @@ from models.database import get_db_connection
 from services.ai_service import evaluate_finops_maturity, generate_recommendations
 from data.capabilities import CAPABILITIES, LENSES, DOMAINS, QUESTIONS, ANSWER_OPTIONS
 from config import DATABASE
+from routes.utils import get_maturity_label
 
 assessment_bp = Blueprint('assessment', __name__)
 
@@ -60,7 +61,8 @@ def dashboard():
     for domain, avg_score, unique_companies in benchmarks:
         benchmark_data[domain] = {
             'avg_score': round(avg_score, 1),
-            'unique_companies': unique_companies
+            'unique_companies': unique_companies,
+            'maturity_label': get_maturity_label(avg_score)
         }
     
     conn.close()
@@ -366,7 +368,9 @@ def get_assessment_results(assessment_id):
 
     ai_error = False
     ai_error_message = None
+    ai_processing = False
     if is_invalid_recommendations(recommendations):
+        ai_processing = True
         # Calculate overall percentage if needed
         total_score = sum(response[3] for response in responses) if responses else 0
         total_questions = len(responses) if responses else 0
@@ -381,12 +385,15 @@ def get_assessment_results(assessment_id):
                     UPDATE assessments SET recommendations = ? WHERE id = ?
                 ''', (recommendations, assessment_id))
                 conn.commit()
+                ai_processing = False
             else:
                 ai_error = True
                 ai_error_message = "AI recommendations are temporarily unavailable. We’ll try again next time you view this report."
+                ai_processing = False
         except Exception as e:
             ai_error = True
             ai_error_message = "AI recommendations are temporarily unavailable due to a system error. We’ll try again next time you view this report."
+            ai_processing = False
 
     # Calculate domain-specific benchmarks
     if domain == 'Complete Assessment':
@@ -563,6 +570,8 @@ def get_assessment_results(assessment_id):
                 current_rec['description'] = line[12:].strip()
             elif line.startswith('Why it matters:'):
                 current_rec['why_matters'] = line[15:].strip()
+            elif line.startswith('Why it is important:'):
+                current_rec['why_matters'] = line[20:].strip()
             elif line.startswith('Recommendation:'):
                 current_rec['recommendation'] = line[15:].strip()
         
@@ -677,6 +686,9 @@ def get_assessment_results(assessment_id):
     print("total_questions:", total_questions)
     print("assessment_id:", assessment_id)
     
+    user_maturity_label = get_maturity_label(user_score)
+    industry_maturity_label = get_maturity_label(industry_avg)
+    
     return render_template('results.html', 
                          assessment_id=assessment_id,
                          domain=domain,
@@ -702,7 +714,10 @@ def get_assessment_results(assessment_id):
                          unique_questions_answered=unique_questions_answered,
                          raw_average=raw_average,
                          ai_error=ai_error,
-                         ai_error_message=ai_error_message)
+                         ai_error_message=ai_error_message,
+                         ai_processing=ai_processing,
+                         user_maturity_label=user_maturity_label,
+                         industry_maturity_label=industry_maturity_label)
 
 @assessment_bp.route('/set_current_assessment/<int:assessment_id>')
 def set_current_assessment(assessment_id):

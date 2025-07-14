@@ -399,20 +399,21 @@
         
         <div class="score-grid">
             <div class="score-card">
-                <h3>{{ overall_percentage | round(1) }}%</h3>
+                <h3>{{ user_maturity_label }}</h3>
                 <p>Overall Maturity</p>
             </div>
-            
+            <div class="score-card">
+                <h3>{{ overall_percentage | round(1) }}%</h3>
+                <p>Score Percentage</p>
+            </div>
             <div class="score-card">
                 <h3>{{ total_score }}</h3>
                 <p>Points Earned</p>
             </div>
-            
             <div class="score-card">
                 <h3>{{ total_possible_points }}</h3>
                 <p>Total Possible</p>
             </div>
-            
             <div class="score-card">
                 <h3>{{ raw_average | round(1) if raw_average and raw_average > 0 else 0 }}</h3>
                 <p>Average (0-4)</p>
@@ -433,13 +434,13 @@
             <h3 style="color: #333; margin-bottom: 10px; font-size: 14px;">📊 Overall Performance</h3>
             <div class="benchmark-content">
                 <div class="benchmark-bar">
-                    <strong>Industry Average:</strong> {{ industry_avg | round(1) }}%
+                    <strong>Industry Average:</strong> {{ industry_maturity_label }} ({{ industry_avg | round(1) }})
                     <div class="bar-container">
                         <div class="bar-fill industry" style="width: {{ industry_avg }}%;"></div>
                     </div>
                 </div>
                 <div class="benchmark-bar">
-                    <strong>Your Organization:</strong> {{ user_score | round(1) }}%
+                    <strong>Your Organization:</strong> {{ user_maturity_label }} ({{ user_score | round(1) }})
                     <div class="bar-container">
                         <div class="bar-fill user" style="width: {{ user_score }}%;"></div>
                     </div>
@@ -493,13 +494,13 @@
         <!-- Standard benchmark for domain-specific assessments -->
         <div class="benchmark-content">
             <div class="benchmark-bar">
-                <strong>Industry Average:</strong> {{ industry_avg | round(1) }}%
+                <strong>Industry Average:</strong> {{ industry_maturity_label }} ({{ industry_avg | round(1) }})
                 <div class="bar-container">
                     <div class="bar-fill industry" style="width: {{ industry_avg }}%;"></div>
                 </div>
             </div>
             <div class="benchmark-bar">
-                <strong>Your Organization:</strong> {{ user_score | round(1) }}%
+                <strong>Your Organization:</strong> {{ user_maturity_label }} ({{ user_score | round(1) }})
                 <div class="bar-container">
                     <div class="bar-fill user" style="width: {{ user_score }}%;"></div>
                 </div>

@@ -86,6 +86,11 @@ This platform represents the future of FinOps assessment—combining cutting-edg
 - **Multi-Format AI Insights**: PDF, Excel, and print options all enhanced with AI-generated analysis
 - **Contextual Recommendations**: Each export includes AI-generated improvement suggestions tailored to your responses
 
+### 🆕 Visual Maturity Labels & Reporting
+- **Maturity Level Labels**: The platform now displays clear maturity labels (Crawl, Walk, Run) above each bar in the "Company vs Industry Maturity by Domain" dashboard chart, and in tooltips for instant context.
+- **Benchmark Reporting**: In both the web and PDF reports, industry and organization benchmarks are shown as "Industry Average: Walk (1.9)" and "Your Organization: Walk (1.9)", for each domain—without the (0–4) scale text.
+- **Enhanced Dashboard & Reports**: The dashboard and reports now provide a visually clear, side-by-side comparison of maturity levels for your company and the industry, making it easy to identify strengths and opportunities for improvement at a glance.
+
 ## 🚀 Quick Start
 
 ### Prerequisites

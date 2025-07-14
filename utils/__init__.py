@@ -1,1 +1,0 @@
-# Utils package for FinOps Assessment Platform 

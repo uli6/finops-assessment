@@ -353,7 +353,31 @@ def get_assessment_results(assessment_id):
         ORDER BY capability_id, lens_id
     ''', (assessment_id,))
     responses = cursor.fetchall()
-    
+
+    # --- Ensure recommendations are generated if missing or invalid ---
+    def is_invalid_recommendations(recommendations):
+        if not recommendations:
+            return True
+        if 'Unable to generate recommendations' in recommendations:
+            return True
+        if recommendations.strip() == '':
+            return True
+        return False
+
+    if is_invalid_recommendations(recommendations):
+        # Calculate overall percentage if needed
+        total_score = sum(response[3] for response in responses) if responses else 0
+        total_questions = len(responses) if responses else 0
+        overall_pct = (total_score / total_questions) if total_questions > 0 else 0
+        lens_scores = {f"{r[0]}_{r[1]}": r[3] for r in responses}
+        from services.ai_service import generate_recommendations
+        recommendations = generate_recommendations(assessment_id, scope_id, domain, overall_pct, lens_scores)
+        # Save to DB
+        cursor.execute('''
+            UPDATE assessments SET recommendations = ? WHERE id = ?
+        ''', (recommendations, assessment_id))
+        conn.commit()
+
     # Calculate domain-specific benchmarks
     if domain == 'Complete Assessment':
         # For complete assessments, calculate benchmarks by domain using actual response scores

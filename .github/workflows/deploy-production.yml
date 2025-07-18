@@ -26,6 +26,7 @@ jobs:
         pip install requests
     
     - name: Setup SSH
+      if: ${{ secrets.AWS_SSH_KEY != '' }}
       run: |
         mkdir -p ~/.ssh
         echo "${{ secrets.AWS_SSH_KEY }}" > ~/.ssh/id_rsa
@@ -33,6 +34,7 @@ jobs:
         ssh-keyscan -H ${{ secrets.AWS_HOST }} >> ~/.ssh/known_hosts
     
     - name: Deploy to AWS
+      if: ${{ secrets.AWS_SSH_KEY != '' }}
       run: |
         ssh ${{ secrets.AWS_USER }}@${{ secrets.AWS_HOST }} << 'EOF'
           cd /home/ec2-user/finops-assessment
@@ -42,6 +44,7 @@ jobs:
         EOF
     
     - name: Record deployment in New Relic
+      if: ${{ secrets.NEW_RELIC_API_KEY != '' }}
       run: |
         python deploy_newrelic.py
       env:
@@ -51,6 +54,7 @@ jobs:
         GITHUB_ACTOR: ${{ github.actor }}
     
     - name: Health check
+      if: ${{ secrets.AWS_HOST != '' }}
       run: |
         sleep 10
         curl -f http://${{ secrets.AWS_HOST }}:5002/ || exit 1 

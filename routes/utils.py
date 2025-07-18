@@ -7,8 +7,29 @@ from datetime import datetime
 from models.database import get_db_connection
 from services.ai_service import evaluate_finops_maturity
 from config import DATABASE
+from functools import wraps
 
 utils_bp = Blueprint('utils', __name__)
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('auth.index'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+def get_user_by_email(email):
+    """Fetch a user row by email (normalized and hashed)"""
+    from services.encryption_service import encryption_service
+    from routes.auth import normalize_email
+    email = normalize_email(email.strip().lower())
+    email_hash = encryption_service.hash_email(email)
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM users WHERE email_hash = ?', (email_hash,))
+        return cursor.fetchone()
 
 def get_maturity_label(avg):
     """Map average score to maturity label ('Crawl', 'Walk', 'Run')"""

@@ -10,6 +10,12 @@ from config import DATABASE
 
 auth_bp = Blueprint('auth', __name__)
 
+def normalize_email(email):
+    local, at, domain = email.partition('@')
+    if '+' in local:
+        local = local.split('+', 1)[0]
+    return f"{local}@{domain}"  # Always lowercased by caller
+
 @auth_bp.route('/')
 def index():
     """Landing page"""
@@ -20,6 +26,7 @@ def register():
     """Handle user registration"""
     data = request.get_json()
     email = data.get('email', '').strip().lower()
+    email = normalize_email(email)
     company_role = data.get('company_role', '').strip()
     
     if not email or '@' not in email:
@@ -71,6 +78,7 @@ def login():
     """Handle user login with magic link"""
     data = request.get_json()
     email = data.get('email', '').strip().lower()
+    email = normalize_email(email)
     
     if not email or '@' not in email:
         return jsonify({'error': 'Valid email is required'}), 400

@@ -8,6 +8,13 @@ import hashlib
 from cryptography.fernet import Fernet
 
 
+def normalize_email(email):
+    local, at, domain = email.partition('@')
+    if '+' in local:
+        local = local.split('+', 1)[0]
+    return f"{local}@{domain}"
+
+
 class EncryptionService:
     """Service for handling data encryption and hashing"""
     
@@ -47,8 +54,9 @@ class EncryptionService:
         return hashlib.sha256(domain.strip().lower().encode()).hexdigest()
     
     def hash_email(self, email):
-        """Hash email address for privacy"""
-        return hashlib.sha256(email.strip().lower().encode()).hexdigest()
+        """Hash email address for privacy, normalizing aliases"""
+        email = normalize_email(email.strip().lower())
+        return hashlib.sha256(email.encode()).hexdigest()
 
 
 # Global instance

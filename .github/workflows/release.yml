@@ -1,4 +1,5 @@
-name: Change Tracking Marker
+name: Release and Record in New Relic
+
 on:
   release:
     types: [published]
@@ -11,6 +12,7 @@ jobs:
       # This step builds a var with the release tag value to use later
       - name: Set Release Version from Tag
         run: echo "RELEASE_VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
+      
       # This step creates a new Change Tracking Marker
       - name: New Relic Application Deployment Marker
         uses: newrelic/deployment-marker-action@v2.3.0
@@ -20,3 +22,13 @@ jobs:
           version: "${{ env.RELEASE_VERSION }}"
           user: "${{ github.actor }}"
           region: EU
+      
+      # Record deployment via our custom script
+      - name: Record deployment via script
+        run: |
+          python deploy_newrelic.py
+        env:
+          NEW_RELIC_API_KEY: ${{ secrets.NEW_RELIC_API_KEY }}
+          NEW_RELIC_APP_ID: ${{ secrets.NEW_RELIC_APP_ID }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_ACTOR: ${{ github.actor }} 

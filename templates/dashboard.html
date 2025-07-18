@@ -359,7 +359,20 @@
 
         <!-- Company Comparison Chart -->
         <div class="new-assessment">
-            <h2>🏢 Company vs Industry Maturity by Domain</h2>
+            <h2 style="display: flex; align-items: center; gap: 8px;">🏢 Company vs Industry Maturity by Domain
+                <span style="position: relative; cursor: pointer;">
+                    <span style="font-size: 0.6em; color: #888; border-bottom: 1px dotted #888; display: inline-block;" tabindex="0" aria-label="Benchmark rules" onmouseover="this.nextElementSibling.style.display='block'" onmouseout="this.nextElementSibling.style.display='none'" onfocus="this.nextElementSibling.style.display='block'" onblur="this.nextElementSibling.style.display='none'">&#9432;</span>
+                    <span id="benchmark-tooltip" style="display:none; position: absolute; left: 24px; top: -8px; background: #fff; color: #333; border: 1px solid #ccc; border-radius: 8px; padding: 12px 16px; font-size: 0.392em; width: 340px; box-shadow: 0 4px 16px rgba(0,0,0,0.10); z-index: 10;">
+                        <b>How are benchmarks calculated?</b><br>
+                        <ul style="margin: 8px 0 0 18px; padding: 0;">
+                            <li>Only assessments completed in the <b>last 12 months</b> are considered.</li>
+                            <li>Benchmarks are calculated by averaging the scores of all users from the <b>same company</b> (same email domain).</li>
+                            <li>Industry averages include all companies with completed assessments in the period.</li>
+                            <li>Company names are anonymized and encrypted for privacy.</li>
+                        </ul>
+                    </span>
+                </span>
+            </h2>
             <p style="color: #666; margin-bottom: 20px;">See how your company's maturity in each FinOps domain compares to the industry average.</p>
             <div id="company-comparison-chart" style="height: 400px; position: relative;">
                 <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #aaa; font-size: 1.1rem;">

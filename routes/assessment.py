@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, jsonify, session, redirec
 import sqlite3
 import json
 import random
-from datetime import datetime
+from datetime import datetime, timedelta
 from models.database import get_db_connection
 from services.ai_service import evaluate_finops_maturity, generate_recommendations
 from data.capabilities import CAPABILITIES, LENSES, DOMAINS, QUESTIONS, ANSWER_OPTIONS
@@ -29,6 +29,8 @@ def dashboard():
     ''', (session['user_id'],))
     assessments = cursor.fetchall()
     
+    # Only consider assessments from the last 12 months for benchmarks
+    twelve_months_ago = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d %H:%M:%S')
     # Get domain-specific benchmarks for dashboard
     cursor.execute('''
         SELECT 
@@ -37,10 +39,10 @@ def dashboard():
             COUNT(DISTINCT u.company_hash) as unique_companies
         FROM assessments a
         JOIN users u ON a.user_id = u.id
-        WHERE a.status = 'completed'
+        WHERE a.status = 'completed' AND a.created_at >= ?
         GROUP BY a.domain
         HAVING COUNT(DISTINCT u.company_hash) >= 1
-    ''')
+    ''', (twelve_months_ago,))
     benchmarks = cursor.fetchall()
     
     # Get dashboard statistics
@@ -400,16 +402,16 @@ def get_assessment_results(assessment_id):
         # For complete assessments, calculate benchmarks by domain using actual response scores
         domain_benchmarks = {}
         all_domains = ["Understand Usage & Cost", "Quantify Business Value", "Optimize Usage & Cost", "Manage the FinOps Practice"]
-        
+        twelve_months_ago = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d %H:%M:%S')
         for domain_name in all_domains:
-            # Get all responses for this domain from domain-specific assessments
+            # Get all responses for this domain from domain-specific assessments (last 12 months)
             cursor.execute('''
                 SELECT r.score, u.company_hash, r.capability_id
                 FROM assessments a
                 JOIN users u ON a.user_id = u.id
                 JOIN responses r ON a.id = r.assessment_id
-                WHERE a.domain = ? AND a.status = 'completed'
-            ''', (domain_name,))
+                WHERE a.domain = ? AND a.status = 'completed' AND a.created_at >= ?
+            ''', (domain_name, twelve_months_ago))
             all_responses = cursor.fetchall()
             
             # Filter responses for this specific domain using Python data
@@ -450,14 +452,15 @@ def get_assessment_results(assessment_id):
         industry_avg = overall_avg
     else:
         # For domain-specific assessments, get data from both domain-specific assessments AND complete assessments
-        # First, get domain-specific assessment data using actual response scores
+        twelve_months_ago = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d %H:%M:%S')
+        # First, get domain-specific assessment data using actual response scores (last 12 months)
         cursor.execute('''
             SELECT r.score, u.company_hash
             FROM assessments a
             JOIN users u ON a.user_id = u.id
             JOIN responses r ON a.id = r.assessment_id
-            WHERE a.domain = ? AND a.status = 'completed'
-        ''', (domain,))
+            WHERE a.domain = ? AND a.status = 'completed' AND a.created_at >= ?
+        ''', (domain, twelve_months_ago))
         domain_specific_responses = cursor.fetchall()
         
         # Calculate average score for domain-specific assessments
@@ -471,8 +474,7 @@ def get_assessment_results(assessment_id):
         
         domain_specific_benchmark = (domain_specific_avg, domain_specific_companies)
         
-        # Then, get domain data from complete assessments by analyzing responses
-        # We need to calculate domain-specific scores from complete assessments
+        # Then, get domain data from complete assessments by analyzing responses (last 12 months)
         cursor.execute('''
             SELECT 
                 a.id,
@@ -484,8 +486,8 @@ def get_assessment_results(assessment_id):
             JOIN users u ON a.user_id = u.id
             JOIN responses r ON a.id = r.assessment_id
             WHERE a.domain = 'Complete Assessment' 
-            AND a.status = 'completed'
-        ''')
+            AND a.status = 'completed' AND a.created_at >= ?
+        ''', (twelve_months_ago,))
         complete_assessment_responses = cursor.fetchall()
         
         # Calculate domain-specific scores from complete assessments

@@ -23,6 +23,7 @@ encryption.key
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyc
 *.so
 .Python
 build/
@@ -70,6 +71,8 @@ finops-assessment.code-workspace
 *.log
 logs/
 log/
+security.log
+newrelic.log
 
 # Temporary files
 *.tmp
@@ -92,6 +95,22 @@ uploads/
 *.xlsx
 *.ppt
 *.pptx
+
+# Development and documentation files
+screenshots/
+PRODUCTION_SECURITY_ANALYSIS.md
+SECURITY_REVIEW_REPORT.md
+COPY_TO_PRIVATE_REPO.md
+DEPLOYMENT_SETUP_GUIDE.md
+GITHUB_SECRETS_SETUP.md
+WORKFLOW_COMPLETE_EXAMPLE.yml
+deploy_newrelic_eu.py
+SECURITY_IMPROVEMENTS_REPORT.md
+CLEANUP_SUMMARY.md
+security_deploy_script.py
+
+# Configuration files with sensitive data
+newrelic.ini
 
 # Backup files
 *.bak
@@ -198,23 +217,6 @@ ipython_config.py
 # pipenv
 #   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
 #   However, in case of collaboration, if having platform-specific dependencies or dependencies
-
-# Development and deployment scripts (temporary)
-production_security_check.py
-update_dependencies.py
-security_deploy_script.py
-VERSION
-
-# Generated documentation and reports
-CLEANUP_SUMMARY.md
-DEPLOYMENT_READY.md
-MANUAL_DEPLOY_INSTRUCTIONS.md
-MERGE_REQUEST_INSTRUCTIONS.md
-SECURITY_IMPROVEMENTS_REPORT.md
-
-# Test files
-test_*.py
-test_*.html
 #   having no cross-platform support, pipenv may install dependencies that don't work, or not
 #   install all needed dependencies.
 #Pipfile.lock
@@ -265,30 +267,3 @@ venv.bak/
 
 # mypy
 .mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Pyre type checker
-.pyre/
-
-# pytype static type analyzer
-.pytype/
-
-# Cython debug symbols
-cython_debug/
-
-# PyCharm
-#  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
-#  be added to the global gitignore or merged into this project gitignore.  For a PyCharm
-#  project, it is recommended to include the following files:
-#  .idea/
-#  *.iml
-#  *.ipr
-#  *.iws
-
-# Application specific
-# Add any application-specific files that should not be tracked
-config.ini
-secrets.json
-private_key.pem
-public_key.pem 

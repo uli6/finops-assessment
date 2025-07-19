@@ -4,7 +4,7 @@
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 1.0.8 | ✅ Yes             |
+| 1.0.9 | ✅ Yes             |
 | < 1.0   | ❌ No              |
 
 ## 🚨 Reporting a Vulnerability
@@ -127,5 +127,5 @@ We believe in responsible disclosure and work with security researchers to:
 
 ---
 
-**Last Updated**: 2025-07-19 15:06:36
-**Version**: 1.0.8
+**Last Updated**: 2025-07-19 15:10:43
+**Version**: 1.0.9

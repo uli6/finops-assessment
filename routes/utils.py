@@ -150,7 +150,7 @@ def my_responses():
     
     conn.close()
     
-    return render_template('my_responses.html', responses=responses)
+    return render_template('dashboard.html', responses=responses)
 
 @utils_bp.route('/settings')
 def settings():

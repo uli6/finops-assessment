@@ -178,7 +178,6 @@ Security issues should be reported privately to prevent exploitation:
 ## 📚 Documentation
 
 - **Security Guide**: [SECURITY.md](SECURITY.md)
-- **Automated Merge Request Guide**: [AUTOMATED_MERGE_REQUEST_GUIDE.md](AUTOMATED_MERGE_REQUEST_GUIDE.md)
 - **API Documentation**: Available in the application
 - **Deployment Guide**: See deployment scripts and configuration
 

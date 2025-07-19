@@ -4,7 +4,7 @@
 
 ## 📊 About
 
-**Version 1.0.11** - Open Source FinOps Assessment Tool
+**Version 1.0.15** - Open Source FinOps Assessment Tool
 
 A comprehensive, open-source platform for evaluating and benchmarking FinOps maturity across organizations. Built with security-first principles and automated validation, this tool helps teams assess their cloud financial operations and identify improvement opportunities.
 
@@ -215,4 +215,4 @@ If you find this project useful, consider supporting its development:
 
 **Built with ❤️ by the open source community**
 
-*Last updated: 2025-07-19 15:34:29*
+*Last updated: 2025-07-19 15:51:30*

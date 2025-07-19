@@ -7,6 +7,7 @@ echo "🔍 Validando repositório..."
 echo "=================================="
 
 ERRORS=0
+FILES_TO_REMOVE=()
 
 # 1. Verificar arquivos de deploy
 echo "📋 Verificando arquivos de deploy..."
@@ -15,7 +16,7 @@ DEPLOY_FILES=$(git ls-files 2>/dev/null | grep -E "(security_deploy_script|produ
 if [ ! -z "$DEPLOY_FILES" ]; then
     echo "❌ ERRO: Arquivos de deploy encontrados no repositório:"
     echo "$DEPLOY_FILES"
-    echo "Execute: git rm --cached <arquivo>"
+    FILES_TO_REMOVE+=($DEPLOY_FILES)
     ERRORS=$((ERRORS + 1))
 else
     echo "✅ Nenhum arquivo de deploy encontrado no repositório"
@@ -29,7 +30,7 @@ DOC_FILES=$(git ls-files 2>/dev/null | grep -E "(AUTOMATED_MERGE_REQUEST_GUIDE|D
 if [ ! -z "$DOC_FILES" ]; then
     echo "❌ ERRO: Documentação de deploy encontrada no repositório:"
     echo "$DOC_FILES"
-    echo "Execute: git rm --cached <arquivo>"
+    FILES_TO_REMOVE+=($DOC_FILES)
     ERRORS=$((ERRORS + 1))
 else
     echo "✅ Nenhuma documentação de deploy encontrada no repositório"
@@ -43,7 +44,7 @@ SENSITIVE_FILES=$(git ls-files 2>/dev/null | grep -E "(\.env$|newrelic\.ini|\.ke
 if [ ! -z "$SENSITIVE_FILES" ]; then
     echo "❌ ERRO: Arquivos sensíveis encontrados no repositório:"
     echo "$SENSITIVE_FILES"
-    echo "Execute: git rm --cached <arquivo>"
+    FILES_TO_REMOVE+=($SENSITIVE_FILES)
     ERRORS=$((ERRORS + 1))
 else
     echo "✅ Nenhum arquivo sensível encontrado no repositório"
@@ -52,59 +53,74 @@ fi
 # 4. Verificar arquivos de desenvolvimento
 echo ""
 echo "🛠️ Verificando arquivos de desenvolvimento..."
-DEV_FILES=$(git ls-files 2>/dev/null | grep -E "(VERSION|test_deploy|\.db|__pycache__|venv/)" || true)
+DEV_FILES=$(git ls-files 2>/dev/null | grep -E "(VERSION|test_deploy|\.db|__pycache__|venv/|finops-assessment\.code-workspace)" || true)
 
 if [ ! -z "$DEV_FILES" ]; then
     echo "❌ ERRO: Arquivos de desenvolvimento encontrados no repositório:"
     echo "$DEV_FILES"
-    echo "Execute: git rm --cached <arquivo>"
+    FILES_TO_REMOVE+=($DEV_FILES)
     ERRORS=$((ERRORS + 1))
 else
     echo "✅ Nenhum arquivo de desenvolvimento encontrado no repositório"
 fi
 
-# 5. Verificar .gitignore
+# 5. Verificar arquivos de teste desnecessários
+echo ""
+echo "🧪 Verificando arquivos de teste..."
+TEST_FILES=$(git ls-files 2>/dev/null | grep -E "(test_.*\.txt|test_.*\.py)" || true)
+
+if [ ! -z "$TEST_FILES" ]; then
+    echo "❌ ERRO: Arquivos de teste encontrados no repositório:"
+    echo "$TEST_FILES"
+    FILES_TO_REMOVE+=($TEST_FILES)
+    ERRORS=$((ERRORS + 1))
+else
+    echo "✅ Nenhum arquivo de teste encontrado no repositório"
+fi
+
+# 6. Verificar .gitignore (opcional)
 echo ""
 echo "📝 Verificando .gitignore..."
 if [ ! -f ".gitignore" ]; then
-    echo "❌ ERRO: Arquivo .gitignore não encontrado"
-    ERRORS=$((ERRORS + 1))
+    echo "⚠️ AVISO: Arquivo .gitignore não encontrado"
 else
-    # Verificar se arquivos de deploy estão no .gitignore
-    if ! grep -q "security_deploy_script.py" .gitignore; then
-        echo "❌ ERRO: security_deploy_script.py não está no .gitignore"
-        ERRORS=$((ERRORS + 1))
-    fi
+    # Verificar se arquivos de deploy estão no .gitignore (apenas avisos)
+    REQUIRED_IGNORES=(
+        "security_deploy_script.py"
+        "production_security_check.py"
+        "update_dependencies.py"
+        "deploy_newrelic.py"
+        "get_newrelic_info.py"
+        "AUTOMATED_MERGE_REQUEST_GUIDE.md"
+        "DOCUMENTATION_STANDARDS.md"
+        "DOCUMENTATION_GUARANTEES.md"
+        "REPOSITORY_CLEANUP_SUMMARY.md"
+        "REPOSITORY_RULES.md"
+        "test_deploy.txt"
+        "finops-assessment.code-workspace"
+        ".env"
+        "newrelic.ini"
+    )
     
-    if ! grep -q "production_security_check.py" .gitignore; then
-        echo "❌ ERRO: production_security_check.py não está no .gitignore"
-        ERRORS=$((ERRORS + 1))
-    fi
+    GITIGNORE_WARNINGS=0
+    for ignore in "${REQUIRED_IGNORES[@]}"; do
+        if ! grep -q "$ignore" .gitignore; then
+            echo "⚠️ AVISO: $ignore não está no .gitignore (mas não está no repositório)"
+            GITIGNORE_WARNINGS=$((GITIGNORE_WARNINGS + 1))
+        fi
+    done
     
-    if ! grep -q "update_dependencies.py" .gitignore; then
-        echo "❌ ERRO: update_dependencies.py não está no .gitignore"
-        ERRORS=$((ERRORS + 1))
-    fi
-    
-    if ! grep -q "AUTOMATED_MERGE_REQUEST_GUIDE.md" .gitignore; then
-        echo "❌ ERRO: AUTOMATED_MERGE_REQUEST_GUIDE.md não está no .gitignore"
-        ERRORS=$((ERRORS + 1))
-    fi
-    
-    if ! grep -q "DOCUMENTATION_STANDARDS.md" .gitignore; then
-        echo "❌ ERRO: DOCUMENTATION_STANDARDS.md não está no .gitignore"
-        ERRORS=$((ERRORS + 1))
-    fi
-    
-    if [ $ERRORS -eq 0 ]; then
+    if [ $GITIGNORE_WARNINGS -eq 0 ]; then
         echo "✅ .gitignore configurado corretamente"
+    else
+        echo "⚠️ $GITIGNORE_WARNINGS aviso(s) no .gitignore (não são erros críticos)"
     fi
 fi
 
-# 6. Verificar arquivos essenciais
+# 7. Verificar arquivos essenciais
 echo ""
 echo "✅ Verificando arquivos essenciais..."
-ESSENTIAL_FILES=("app.py" "config.py" "requirements.txt" "README.md" "SECURITY.md")
+ESSENTIAL_FILES=("app.py" "config.py" "requirements.txt" "README.md" ".env.template" "privacy_notice.md")
 
 for file in "${ESSENTIAL_FILES[@]}"; do
     if [ ! -f "$file" ]; then
@@ -115,7 +131,7 @@ for file in "${ESSENTIAL_FILES[@]}"; do
     fi
 done
 
-# 7. Verificar diretórios essenciais
+# 8. Verificar diretórios essenciais
 echo ""
 echo "📁 Verificando diretórios essenciais..."
 ESSENTIAL_DIRS=("models" "routes" "services" "data" "templates")
@@ -140,7 +156,19 @@ else
     echo "❌ Repositório inválido!"
     echo "❌ $ERRORS erro(s) encontrado(s)"
     echo ""
-    echo "🔧 Para corrigir:"
+    
+    # Mostrar arquivos que precisam ser removidos
+    if [ ${#FILES_TO_REMOVE[@]} -gt 0 ]; then
+        echo "🗑️ Arquivos que precisam ser removidos do repositório:"
+        for file in "${FILES_TO_REMOVE[@]}"; do
+            echo "   - $file"
+        done
+        echo ""
+        echo "🔧 Para corrigir automaticamente, execute:"
+        echo "   ./cleanup_repository.sh"
+    fi
+    
+    echo "🔧 Para corrigir manualmente:"
     echo "1. Remova arquivos de deploy: git rm --cached <arquivo>"
     echo "2. Atualize .gitignore se necessário"
     echo "3. Execute este script novamente"

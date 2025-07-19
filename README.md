@@ -94,15 +94,37 @@ pip install -r requirements.txt
 ```
 
 ### Configuration
-Set your environment variables (see `.env.template`):
-- `EMAIL_USER`, `EMAIL_PASS`, `SMTP_SERVER`, `SMTP_PORT`
-- `OPENAI_API_KEY`
+
+#### Email Setup (Required for Magic Link Login)
+```bash
+# Automated setup (recommended)
+python3 setup_email.py
+
+# Or manual setup
+cp env.example .env
+# Edit .env with your email credentials
+```
+
+**For Gmail users:**
+1. Enable 2-Step Verification
+2. Generate an App Password (not your regular password)
+3. Use the App Password in `EMAIL_PASS`
+
+See [EMAIL_SETUP.md](EMAIL_SETUP.md) for detailed instructions.
+
+#### OpenAI API (Optional)
+Set your OpenAI API key in `.env`:
+```env
+OPENAI_API_KEY=your-openai-api-key
+```
 
 ### Run the App
 ```bash
 python app.py
 ```
 Visit [http://localhost:5002](http://localhost:5002) in your browser.
+
+**Note:** If email is not configured, the app runs in development mode with email logging.
 
 ---
 

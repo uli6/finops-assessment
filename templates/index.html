@@ -304,11 +304,12 @@
                     </ul>
                 </div>
                 <div class="form-group">
-                    <label for="loginEmail">Email Address</label>
-                    <input type="email" id="loginEmail" name="email" required autocomplete="email">
+                    <label for="loginEmail">Corporate Email Address</label>
+                    <input type="email" id="loginEmail" name="email" required autocomplete="email" placeholder="your.name@company.com">
                 </div>
                 <div class="magic-link-box"><span class="icon">🔗</span> <div><b>Magic Link Authentication</b><br><span style="font-weight:400;">We'll send a secure login link to your email. No passwords needed!</span></div></div>
                 <button type="submit" class="btn-primary">Send Magic Link</button>
+                <div style="text-align: center; margin-top: 8px; font-size: 0.75rem; color: #999; opacity: 0.7;">v{{ version }}</div>
             </form>
             <form class="login-form" id="registerForm">
                 <div class="how-login">
@@ -321,8 +322,9 @@
                     </ul>
                 </div>
                 <div class="form-group">
-                    <label for="registerEmail">Email Address</label>
-                    <input type="email" id="registerEmail" name="email" required autocomplete="email">
+                    <label for="registerEmail">Corporate Email Address</label>
+                    <input type="email" id="registerEmail" name="email" required autocomplete="email" placeholder="your.name@company.com">
+                    <div style="font-size: 0.85rem; color: #666; margin-top: 4px;">Personal emails (Gmail, Yahoo, etc.) are not allowed</div>
                 </div>
                 <button type="submit" class="btn-primary">Create Account</button>
             </form>
@@ -356,7 +358,11 @@
                     success.style.display = 'block';
                     document.getElementById('loginEmail').value = '';
                 } else {
-                    alert(data.error || 'Login failed.');
+                    let errorMessage = data.error || 'Login failed.';
+                    if (data.details) {
+                        errorMessage += '\n\n' + data.details;
+                    }
+                    alert(errorMessage);
                 }
             } catch (err) {
                 alert('Network error. Please try again.');
@@ -377,7 +383,11 @@
                     alert(data.message || 'Registration successful! Check your email.');
                     document.getElementById('registerEmail').value = '';
                 } else {
-                    alert(data.error || 'Registration failed.');
+                    let errorMessage = data.error || 'Registration failed.';
+                    if (data.details) {
+                        errorMessage += '\n\n' + data.details;
+                    }
+                    alert(errorMessage);
                 }
             } catch (err) {
                 alert('Network error. Please try again.');

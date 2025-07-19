@@ -6,7 +6,7 @@ from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from models.database import get_db_connection
 from services.email_service import send_confirmation_email, send_magic_link
 from services.encryption_service import encryption_service
-from config import DATABASE
+from config import DATABASE, PUBLIC_EMAIL_DOMAINS
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -16,10 +16,24 @@ def normalize_email(email):
         local = local.split('+', 1)[0]
     return f"{local}@{domain}"  # Always lowercased by caller
 
+def is_corporate_email(email):
+    """Check if email domain is corporate (not public)"""
+    domain = email.split('@')[1].lower()
+    return domain not in PUBLIC_EMAIL_DOMAINS
+
+def get_version():
+    """Get application version from VERSION file"""
+    try:
+        with open('VERSION', 'r') as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        return '1.0.0'
+
 @auth_bp.route('/')
 def index():
     """Landing page"""
-    return render_template('index.html')
+    version = get_version()
+    return render_template('index.html', version=version)
 
 @auth_bp.route('/register', methods=['POST'])
 def register():
@@ -31,6 +45,13 @@ def register():
     
     if not email or '@' not in email:
         return jsonify({'error': 'Valid email is required'}), 400
+    
+    # Validate corporate email domain
+    if not is_corporate_email(email):
+        return jsonify({
+            'error': 'Please use your corporate email address for registration. Personal email addresses (Gmail, Yahoo, etc.) are not allowed.',
+            'details': 'This platform is designed for organizational FinOps assessments and requires a corporate email domain.'
+        }), 400
     
     # Hash email for privacy
     email_hash = encryption_service.hash_email(email)
@@ -82,6 +103,13 @@ def login():
     
     if not email or '@' not in email:
         return jsonify({'error': 'Valid email is required'}), 400
+    
+    # Check if email is corporate (for better user experience)
+    if not is_corporate_email(email):
+        return jsonify({
+            'error': 'Please use your corporate email address to login.',
+            'details': 'This platform requires a corporate email domain. If you have a corporate account, please use that email address.'
+        }), 400
     
     email_hash = encryption_service.hash_email(email)
     

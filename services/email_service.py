@@ -10,16 +10,29 @@ from email.mime.multipart import MIMEMultipart
 
 
 def send_email(to_email, subject, body):
-    """Send email using SMTP"""
+    """Send email using SMTP or development mode"""
     try:
         email_user = os.getenv('EMAIL_USER')
         email_pass = os.getenv('EMAIL_PASS')
         smtp_server = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
         smtp_port = int(os.getenv('SMTP_PORT', '587'))
         
+        # Development mode: if no email credentials, just log the email
         if not email_user or not email_pass:
-            print("Email configuration not found. Skipping email send.")
-            return False
+            print("=" * 60)
+            print("📧 DEVELOPMENT MODE - EMAIL NOT SENT")
+            print("=" * 60)
+            print(f"To: {to_email}")
+            print(f"Subject: {subject}")
+            print("Body:")
+            print(body)
+            print("=" * 60)
+            print("💡 To enable real email sending:")
+            print("1. Copy env.example to .env")
+            print("2. Configure EMAIL_USER and EMAIL_PASS")
+            print("3. For Gmail, use App Password (not regular password)")
+            print("=" * 60)
+            return True  # Return True to not break the flow
         
         msg = MIMEText(body, 'html')
         msg['Subject'] = subject
@@ -32,10 +45,10 @@ def send_email(to_email, subject, body):
         server.send_message(msg)
         server.quit()
         
-        print(f"Email sent successfully to {to_email}")
+        print(f"✅ Email sent successfully to {to_email}")
         return True
     except Exception as e:
-        print(f"Error sending email: {e}")
+        print(f"❌ Error sending email: {e}")
         return False
 
 

@@ -36,7 +36,8 @@ def init_db():
         'confirmation_token': 'TEXT',
         'is_confirmed': 'BOOLEAN DEFAULT 0',
         'created_at': 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
-        'is_synthetic': 'BOOLEAN DEFAULT 0'
+        'is_synthetic': 'BOOLEAN DEFAULT 0',
+        'company_role': 'TEXT'
     }
     
     for column_name, column_type in required_columns.items():

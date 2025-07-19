@@ -1,92 +1,89 @@
-# 🛡️ Política de Segurança
+# 🛡️ Security Policy
 
-## 🚨 Reportando Vulnerabilidades
+## Supported Versions
 
-Se você descobriu uma vulnerabilidade de segurança, **NÃO** abra uma issue pública.
+| Version | Supported          |
+| ------- | ------------------ |
+| 1.0.x   | ✅ Yes             |
+| < 1.0   | ❌ No              |
 
-### Processo de Reporte
+## Reporting a Vulnerability
 
-1. **Email de Segurança**: Envie um email para security@example.com
-2. **Título**: Use "[SECURITY] " como prefixo
-3. **Descrição**: Inclua detalhes da vulnerabilidade
-4. **Reprodução**: Forneça passos para reproduzir
-5. **Impacto**: Descreva o impacto potencial
+We take security vulnerabilities seriously. If you discover a security issue, please follow these steps:
 
-### O que Incluir
+### 1. **DO NOT** create a public GitHub issue
+Security vulnerabilities should be reported privately to prevent exploitation.
 
-- ✅ Descrição detalhada da vulnerabilidade
-- ✅ Passos para reproduzir
-- ✅ Possível impacto
-- ✅ Sugestões de correção (se aplicável)
+### 2. Email Security Team
+Send detailed information to: security@yourcompany.com
 
-### O que NÃO Incluir
+### 3. Include the following information:
+- **Description** - Clear description of the vulnerability
+- **Steps to Reproduce** - Detailed reproduction steps
+- **Impact** - Potential impact of the vulnerability
+- **Suggested Fix** - If you have suggestions for fixing the issue
+- **Environment** - OS, browser, and application version
 
-- ❌ Dados sensíveis ou pessoais
-- ❌ Credenciais ou chaves de API
-- ❌ Logs de produção
-- ❌ Informações de configuração interna
+### 4. Response Timeline
+- **Initial Response**: Within 24 hours
+- **Status Update**: Within 72 hours
+- **Resolution**: Depends on severity and complexity
 
-## 🔒 Medidas de Segurança
+## Security Measures
 
-### Implementadas
+### Application Security
+- **Content Security Policy (CSP)** - Prevents XSS attacks
+- **HTTPS Enforcement** - All communications encrypted
+- **Input Validation** - Comprehensive data sanitization
+- **Session Security** - Secure session management
+- **Rate Limiting** - Protection against abuse
 
-- Rate limiting e proteção contra DDoS
-- Headers de segurança (XSS, clickjacking)
-- Validação e sanitização de entrada
-- Autenticação segura com magic links
-- Criptografia de dados sensíveis
-- Logging de eventos de segurança
-- Sessões seguras com expiração
+### Infrastructure Security
+- **Secure Headers** - XSS, CSRF, and clickjacking protection
+- **Database Encryption** - Sensitive data encrypted at rest
+- **Access Controls** - Role-based access control
+- **Audit Logging** - Comprehensive security logging
+- **Regular Updates** - Security patches applied promptly
 
-### Monitoramento
+### Development Security
+- **Code Review** - All changes reviewed for security
+- **Dependency Scanning** - Regular vulnerability scanning
+- **Security Testing** - Automated security tests
+- **Secure Development** - Security-first development practices
 
-- Logs de segurança em tempo real
-- Detecção de atividades suspeitas
-- Monitoramento de tentativas de acesso
-- Alertas para eventos críticos
+## Security Best Practices
 
-## 📋 Checklist de Segurança
+### For Users
+- Use strong, unique passwords
+- Enable two-factor authentication when available
+- Keep your browser and OS updated
+- Report suspicious activity immediately
+- Don't share sensitive information in public channels
 
-### Para Desenvolvedores
+### For Developers
+- Follow secure coding practices
+- Keep dependencies updated
+- Use security scanning tools
+- Implement proper error handling
+- Validate all user inputs
 
-- [ ] Execute `python production_security_check.py`
-- [ ] Verifique dependências com `python update_dependencies.py`
-- [ ] Teste validação de entrada
-- [ ] Verifique headers de segurança
-- [ ] Teste rate limiting
-- [ ] Valide autenticação
+## Security Updates
 
-### Para Deploy
+Security updates are released as needed and announced through:
+- GitHub Security Advisories
+- Email notifications to registered users
+- Release notes with security information
 
-- [ ] Configure variáveis de ambiente seguras
-- [ ] Desabilite debug mode
-- [ ] Configure HTTPS/SSL
-- [ ] Configure firewall
-- [ ] Backup de dados
-- [ ] Monitoramento ativo
+## Contact Information
 
-## 🔄 Atualizações de Segurança
+- **Security Email**: security@yourcompany.com
+- **PGP Key**: Available upon request
+- **Response Time**: 24 hours for initial response
 
-### Dependências
+## Acknowledgments
 
-- Verificação automática de vulnerabilidades
-- Atualização semanal de dependências
-- Monitoramento de CVE conhecidos
-- Testes de regressão após atualizações
-
-### Código
-
-- Revisão de código focada em segurança
-- Análise estática de código
-- Testes de penetração regulares
-- Auditorias de segurança
-
-## 📞 Contato
-
-- **Email de Segurança**: security@example.com
-- **Resposta**: 24-48 horas para vulnerabilidades críticas
-- **Confidencialidade**: Todos os reportes são tratados com confidencialidade
+We appreciate security researchers who responsibly disclose vulnerabilities. Contributors will be acknowledged in our security hall of fame (with permission).
 
 ---
 
-**Última atualização**: 2025-07-19
+*Last updated: {datetime.now().strftime('%Y-%m-%d')}*

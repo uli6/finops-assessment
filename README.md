@@ -1,163 +1,108 @@
 # 🛡️ FinOps Assessment Platform
 
-Uma plataforma segura e moderna para avaliação de maturidade FinOps, construída com Flask e foco em segurança.
+A comprehensive FinOps maturity assessment platform with advanced security features and automated deployment capabilities.
 
-## 🔒 Segurança
+## 🔒 Security Features
 
-### ✅ **Recursos de Segurança Implementados**
+- **Content Security Policy (CSP)** - Protects against XSS attacks
+- **Security Headers** - Implements security best practices
+- **Input Validation** - Comprehensive data validation
+- **Encryption** - Sensitive data encryption
+- **Rate Limiting** - Protection against abuse
+- **Secure Authentication** - Session-based security
 
-- **Rate Limiting**: Proteção contra ataques de força bruta e spam
-- **Headers de Segurança**: XSS, clickjacking, MIME sniffing protection
-- **Autenticação Segura**: Magic links com expiração e validação
-- **Criptografia**: Dependências atualizadas (cryptography >= 44.0.1)
-- **Logging de Segurança**: Monitoramento de atividades suspeitas
-- **Validação de Entrada**: Sanitização e validação robusta
-- **Sessões Seguras**: Cookies HttpOnly, Secure, SameSite
-- **Debug Mode Seguro**: Automaticamente desabilitado em produção
-- **Binding Seguro**: Localhost apenas em produção
+## 🚀 Quick Start
 
-### 🚨 **Aviso de Segurança**
+### Development Setup
 
-Este é um repositório público (open-source). **NUNCA** commite:
-- Chaves de API ou secrets
-- Arquivos de configuração com dados sensíveis
-- Logs de produção
-- Bancos de dados
-- Arquivos de ambiente (.env)
-
-## 🚀 Instalação
-
-### Pré-requisitos
-- Python 3.9+
-- pip
-- Git
-
-### Configuração
-
-1. **Clone o repositório:**
 ```bash
-git clone https://github.com/seu-usuario/finops-assessment.git
+# Clone the repository
+git clone <repository-url>
 cd finops-assessment
+
+# Setup development environment
+./dev_setup.sh
+
+# Activate virtual environment
+source venv/bin/activate
+
+# Run in development mode
+FLASK_ENV=development AWS_ENV=0 python3 app.py
 ```
 
-2. **Configure o ambiente virtual:**
+### Production Deployment
+
 ```bash
-python3 -m venv venv
-source venv/bin/activate  # Linux/Mac
-# ou
-venv\Scripts\activate  # Windows
+# Run security deployment script
+python3 security_deploy_script.py
 ```
 
-3. **Instale as dependências:**
+## 📋 Features
+
+- **FinOps Assessment** - Comprehensive maturity evaluation
+- **Benchmark Comparison** - Industry and company comparisons
+- **Security Validation** - Automated security checks
+- **Automated Deployment** - CI/CD pipeline integration
+- **Documentation** - Complete security and deployment guides
+
+## 🔧 Configuration
+
+### Environment Variables
+
 ```bash
-pip install -r requirements.txt
+# Required for production
+SECRET_KEY=your-secret-key
+EMAIL_USER=your-email
+EMAIL_PASS=your-password
+OPENAI_API_KEY=your-openai-key
+
+# Development settings
+FLASK_ENV=development
+AWS_ENV=0
 ```
 
-4. **Configure as variáveis de ambiente:**
-```bash
-cp .env.example .env
-# Edite .env com suas configurações
-```
+### Security Configuration
 
-5. **Configure o New Relic (opcional):**
-```bash
-cp newrelic.ini.template newrelic.ini
-# Edite newrelic.ini com sua license key
-```
+The application includes comprehensive security measures:
 
-## 🔧 Desenvolvimento
+- **CSP Headers** - Configured for Chart.js and external resources
+- **HTTPS Enforcement** - SSL/TLS in production
+- **Secure Headers** - XSS, CSRF, and clickjacking protection
+- **Database Security** - Encrypted sensitive data
+- **Input Sanitization** - All user inputs validated
 
-### Verificação de Segurança
-```bash
-python production_security_check.py
-```
+## 📊 Assessment Domains
 
-### Atualização de Dependências
-```bash
-python update_dependencies.py
-```
+1. **Cost Optimization** - Resource efficiency and cost management
+2. **Governance** - Policies, processes, and controls
+3. **Operations** - Monitoring, automation, and incident management
+4. **Culture** - Team collaboration and FinOps adoption
 
-### Executar em Desenvolvimento
-```bash
-FLASK_ENV=development python app.py
-```
+## 🛡️ Security Policy
 
-## 🚀 Deploy em Produção
-
-### Verificação Pré-Deploy
-```bash
-# Executar script de segurança e deploy
-python security_deploy_script.py
-```
-
-### Configuração de Produção
-1. Configure as variáveis de ambiente de produção
-2. Execute `python production_security_check.py`
-3. Siga o guia em `PRODUCTION_DEPLOYMENT_GUIDE.md`
-
-### Docker
-```bash
-docker build -t finops-assessment .
-docker run -p 5002:5002 finops-assessment
-```
-
-## 📊 Funcionalidades
-
-- **Avaliação FinOps**: Questionário abrangente de maturidade
-- **Benchmarks**: Comparação com dados da indústria
-- **Recomendações IA**: Sugestões personalizadas baseadas em IA
-- **Relatórios**: Geração de relatórios detalhados
-- **Dashboard**: Visualização de progresso e resultados
-
-## 🔧 Tecnologias
-
-- **Backend**: Flask (Python)
-- **Frontend**: HTML, CSS, JavaScript
-- **Banco de Dados**: SQLite
-- **IA**: OpenAI GPT
-- **Segurança**: Flask-Talisman, cryptography
-- **Monitoramento**: New Relic
-
-## 📝 Licença
-
-Este projeto está licenciado sob a MIT License - veja o arquivo [LICENSE](LICENSE) para detalhes.
-
-## 🤝 Contribuição
-
-1. Fork o projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
-3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. Push para a branch (`git push origin feature/AmazingFeature`)
-5. Abra um Pull Request
-
-### Diretrizes de Contribuição
-
-- ✅ Siga as boas práticas de segurança
-- ✅ Execute os testes de segurança antes do commit
-- ✅ Mantenha a documentação atualizada
-- ✅ Use commits descritivos
-- ❌ NUNCA commite dados sensíveis
-
-## 🆘 Suporte
-
-Para problemas de segurança:
-1. **NÃO** abra issues públicos com dados sensíveis
-2. Entre em contato diretamente com os mantenedores
-3. Use o email de segurança: security@example.com
-
-Para outros problemas:
-- Abra uma issue no GitHub
-- Inclua logs relevantes (sem dados sensíveis)
-- Descreva os passos para reproduzir
+See [SECURITY.md](SECURITY.md) for detailed security information and vulnerability reporting procedures.
 
 ## 📈 Roadmap
 
-- [ ] Autenticação OAuth2
-- [ ] Integração com provedores cloud
-- [ ] API REST completa
-- [ ] Dashboard avançado
-- [ ] Relatórios em tempo real
+- [ ] Advanced analytics and forecasting
+- [ ] Enhanced cross-team collaboration
+- [ ] Advanced automation and AI capabilities
+- [ ] Multi-cloud support
+- [ ] Real-time cost monitoring
 
----
+## 🤝 Contributing
 
-**⚠️ Importante**: Este é um repositório público. Mantenha a segurança em mente ao contribuir.
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run security checks
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🆘 Support
+
+For security issues, please see [SECURITY.md](SECURITY.md).
+For general support, please open an issue in the repository.

@@ -133,3 +133,14 @@ commit/
 ✅ Repository is ready for commit/push
 
 # Maintenance files (auto-added)
+
+# Maintenance files (auto-added)
+com/
+compare/
+deploy/
+deploy/main
+finops-assessment-deploy/
+origin/
+origin/main
+screenshots/
+uli6/

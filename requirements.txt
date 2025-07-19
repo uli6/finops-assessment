@@ -14,3 +14,4 @@ openpyxl==3.1.2
 
 markdown
 flask-talisman
+requests>=2.31.0

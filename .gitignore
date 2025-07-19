@@ -107,7 +107,13 @@ WORKFLOW_COMPLETE_EXAMPLE.yml
 deploy_newrelic_eu.py
 SECURITY_IMPROVEMENTS_REPORT.md
 CLEANUP_SUMMARY.md
+MERGE_REQUEST_INSTRUCTIONS.md
+MANUAL_DEPLOY_INSTRUCTIONS.md
+DEPLOYMENT_READY.md
+production_security_check.py
+update_dependencies.py
 security_deploy_script.py
+VERSION
 
 # Configuration files with sensitive data
 newrelic.ini

@@ -53,6 +53,11 @@ update_dependencies.py
 security_deploy_script.py
 VERSION
 
+# Deployment documentation and guides
+AUTOMATED_MERGE_REQUEST_GUIDE.md
+DOCUMENTATION_STANDARDS.md
+DOCUMENTATION_GUARANTEES.md
+
 # Configuration files with sensitive data
 newrelic.ini
 *.key

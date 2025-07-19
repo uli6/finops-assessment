@@ -35,7 +35,6 @@ ENV/
 Thumbs.db
 
 # Development and documentation files
-screenshots/
 PRODUCTION_SECURITY_ANALYSIS.md
 SECURITY_REVIEW_REPORT.md
 COPY_TO_PRIVATE_REPO.md
@@ -132,3 +131,6 @@ Check if repository is ready for commit/push
 \n⚠️ Repository not ready for commit/push
 commit/
 ✅ Repository is ready for commit/push
+
+# Maintenance files (auto-added)
+screenshots/

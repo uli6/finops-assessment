@@ -83,3 +83,52 @@ SECURITY.md
 .github/workflows/test.yml
 .github/workflows/release.yml
 test_*.txt
+
+# Maintenance files (auto-added)
+*.cfg
+*.conf
+*.ini
+*.json
+*.md
+*.sh
+*.yaml
+*.yml
+bin/
+cleanup_*.py
+deploy_*.py
+dev_*.py
+docs/
+documentation/
+file.txt
+maintenance/
+maintenance_*.py
+maintenance_script.py
+scripts/
+setup_*.py
+tools/
+usr/
+utilities/
+validate_*.py
+
+# Maintenance files (auto-added)
+Get all files referenced in README.md
+README.md
+app.py
+config.py
+privacy_notice.md
+requirements.txt
+y/
+
+# Maintenance files (auto-added)
+README_UPDATE_SUGGESTION.md
+UI/
+
+# Maintenance files (auto-added)
+1/
+2/
+
+# Maintenance files (auto-added)
+Check if repository is ready for commit/push
+\n⚠️ Repository not ready for commit/push
+commit/
+✅ Repository is ready for commit/push

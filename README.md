@@ -94,7 +94,7 @@ pip install -r requirements.txt
 ```
 
 ### Configuration
-Set your environment variables (see `.env.example`):
+Set your environment variables (see `.env.template`):
 - `EMAIL_USER`, `EMAIL_PASS`, `SMTP_SERVER`, `SMTP_PORT`
 - `OPENAI_API_KEY`
 
